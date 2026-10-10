@@ -45,7 +45,18 @@ Racik adalah web app editor desain (gaya Canva) dengan **AI auto-generate desain
 - **Edit gambar AI**: ubah gambar terpilih dengan instruksi
 - **Copywriting**: 5 alternatif headline/tagline/caption/CTA, atau tulis ulang teks terpilih
 - **Personalisasi**: rating 👍/👎 + masukan, Brand Kit (warna, font, logo, tone of voice) otomatis dipakai AI
-- Pemilihan model teks & gambar dari UI lintas provider (daftar diatur lewat env)
+- Pemilihan model teks & gambar lintas provider oleh admin (Panel admin → Konfigurasi AI; daftar model diatur lewat env)
+
+### Akses public & admin, saldo, system log
+- **Dua akses**: user biasa (public) dan **admin**. Admin ditentukan lewat `ADMIN_EMAILS`; admin lain bisa diangkat dari panel admin.
+- **User tidak tahu dalaman AI**: provider & model tidak pernah dikirim ke browser user (tidak ada pilihan model, pesan error vendor diganti pesan umum + kode request). Model per fitur (teks/layout, gambar, edit gambar) dipilih admin di **Panel admin → Konfigurasi AI**; API key provider tetap di env.
+- **Saldo (top up)**: setiap hit AI memotong saldo (Rupiah). Editor biasa (teks, gambar, layer, export, template) **gratis**.
+  - Biaya: Magic Design / Perbaiki = 1x tarif model teks + tarif model gambar × gambar yang berhasil dibuat; Gambar AI = tarif gambar; Edit gambar = tarif edit; Copywriting = tarif teks.
+  - Saldo dipotong di depan (atomik, tidak bisa minus), lalu **dikembalikan otomatis** kalau vendor gagal / gambar gagal dibuat. Saldo kurang → `402` dengan `code: insufficient_balance`; kalau saldo hanya cukup untuk sebagian gambar, sisanya dilewati.
+  - Riwayat lengkap di halaman **Saldo** (`/wallet`), tersimpan di tabel `wallet_transactions`.
+- **Konfigurasi harga** (Panel admin): harga ke user = **harga vendor + 5%** (markup global bisa diubah, juga markup khusus per model); model yang gratis di vendor / belum diatur = **Rp 100 per hit**. Harga vendor diisi admin dalam Rupiah per hit.
+- **Tambah saldo oleh admin** (tahap testing, sebelum ada payment gateway): Panel admin → Pengguna & saldo → tombol **+ Saldo** (nilai negatif = koreksi). Tercatat di riwayat saldo & activity log.
+- **System log ke Elasticsearch** (lihat [System log](#system-log-elasticsearch)): activity user untuk fitur riskan (login/daftar/tamu, hit model AI, aksi admin) dan semua request ke vendor AI. Bisa dicari dari **Panel admin → System log** atau Kibana.
 
 ### Lainnya
 - Landing page = kotak prompt AI, ukuran preset, galeri template (8 template bawaan), desain terbaru (cari, bintangi, duplikat, hapus)
@@ -150,7 +161,7 @@ Perilaku kenari yang ditangani konektor (`backend/internal/ai/kenari.go`):
 ### Provider AI lain
 
 Selain kenari, backend bisa memakai provider yang juga dipakai katilidev. Provider aktif begitu
-API key-nya diisi; modelnya muncul di dropdown UI dengan id `<provider>:<model>` (label
+API key-nya diisi; modelnya muncul di dropdown Panel admin → Konfigurasi AI dengan id `<provider>:<model>` (label
 `model · Provider`). Model default lintas provider diatur dengan `AI_TEXT_MODEL` / `AI_IMAGE_MODEL`
 (mis. `anthropic:claude-sonnet-5-5`); kosong = model kenari, atau model pertama provider aktif
 kalau kenari tidak diisi. Urutan di dropdown: kenari, anthropic, groq, nvidia, agnes, openrouter,
@@ -174,6 +185,22 @@ dan OpenRouter dicocokkan dengan `GET /models` masing-masing; yang tidak dikenal
 
 ---
 
+## System log (Elasticsearch)
+
+Dua jenis log dikirim asinkron (batch lewat Bulk API, tidak memperlambat request) ke Elasticsearch:
+
+| Index | Isi |
+|---|---|
+| `racik-activity-YYYY.MM` | Request user ke Racik untuk fitur riskan: `auth.login` (termasuk gagal + email yang dicoba + alasan), `auth.register`, `auth.guest`, `auth.upgrade`, `ai.design`/`ai.refine`/`ai.image`/`ai.image_edit`/`ai.copy` (prompt ringkas, saldo dipotong/dikembalikan), `admin.balance`, `admin.user_role`, `admin.ai_config`, `admin.pricing`. Field: `@timestamp`, `request_id`, `action`, `user_id`, `email`, `ip`, `user_agent`, `status`, `success`, `duration_ms`, `error`, `details` |
+| `racik-vendor-YYYY.MM` | Request Racik ke vendor AI: `provider`, `model`, `operation` (chat/image/edit), `feature`, `duration_ms`, `success`, `status`/`error_code`/`error` asli vendor, `prompt`, `vendor_price`, `user_price`, `user_id`, `request_id` |
+
+- `request_id` sama dengan header `X-Request-ID`, kode yang tampil di pesan error user, dan kolom `request_id` di `wallet_transactions` — jadi satu keluhan user bisa ditelusuri sampai ke request vendor-nya.
+- Saat start backend membuat index template (mapping) dan ILM policy retensi `LOG_RETENTION_DAYS` (default 90 hari).
+- `LOG_ES_URL` kosong atau ES mati → log ditulis ke stdout (`[log:activity] {...}`), server tetap jalan.
+- Docker Compose sudah menyertakan Elasticsearch single-node (heap 512 MB). Kibana opsional: `docker compose --profile kibana up`.
+
+Kenapa Elasticsearch: cocok untuk log terstruktur yang perlu dicari & difilter (per user, aksi, error), ada Kibana untuk dashboard, dan retensi via ILM. Kalau RAM server terbatas (ES butuh ±1 GB), alternatif yang lebih ringan adalah **VictoriaLogs** (single binary, RAM puluhan MB, menerima Bulk API Elasticsearch sehingga pengiriman log tetap jalan dengan `LOG_ES_URL=http://victorialogs:9428/insert/elasticsearch`) — tetapi pencarian di Panel admin memakai Search API Elasticsearch, jadi untuk VictoriaLogs pencarian dilakukan lewat UI VictoriaLogs/Grafana.
+
 ## API ringkas
 
 | Method | Path | Keterangan |
@@ -186,10 +213,18 @@ dan OpenRouter dicocokkan dengan `GET /models` masing-masing; yang tidak dikenal
 | GET/POST/DELETE | `/api/assets` | Upload gambar (multipart `file`) |
 | GET | `/api/templates` | Template bawaan |
 | GET/PUT | `/api/brand-kit` | Brand kit |
-| GET | `/api/ai/models` | Model AI yang tersedia |
+| GET | `/api/ai/models` | Status layanan AI & tarif per fitur (tanpa nama model) |
 | POST | `/api/ai/design` · `/refine` · `/image` · `/image-edit` · `/copy` | Fitur AI |
 | GET | `/api/ai/generations` | Riwayat AI |
 | POST | `/api/ai/generations/{id}/rate` | Rating 👍/👎 + masukan |
+| GET | `/api/wallet` | Saldo, tarif fitur AI, riwayat transaksi |
+| GET | `/api/admin/users` | (admin) Daftar user + saldo (`q`, `guests=1`, `page`) |
+| POST | `/api/admin/users/{id}/balance` | (admin) Tambah/koreksi saldo `{amount, note}` |
+| PATCH | `/api/admin/users/{id}` | (admin) Ubah role `{role: user\|admin}` |
+| GET | `/api/admin/users/{id}/transactions` | (admin) Riwayat saldo user |
+| GET/PUT | `/api/admin/ai-config` | (admin) Model teks / gambar / edit gambar |
+| GET/PUT | `/api/admin/pricing` | (admin) Markup global, tarif model gratis, harga vendor per model |
+| GET | `/api/admin/logs` | (admin) Cari system log (`type=activity\|vendor`, `q`, `action`, `success`, `userId`, `from`, `to`, `page`) |
 
 ## Testing
 
@@ -204,3 +239,5 @@ cd frontend && npx nuxi typecheck
 - Hapus background khusus (sementara bisa lewat "Edit gambar AI")
 - Animasi/video, chart, tabel, teks melengkung
 - Library foto stok (bisa diganti dengan Gambar AI)
+- Top up saldo mandiri lewat payment gateway (QRIS/VA) — sementara saldo ditambah admin
+- Saldo sambutan untuk user baru / akun tamu (saat ini akun baru mulai dari Rp 0)

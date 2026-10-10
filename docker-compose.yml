@@ -1,6 +1,7 @@
 # Jalankan semua: docker compose up --build
 # Demo tanpa API key kenari.id: docker compose --profile demo up --build
 #   lalu set KENARI_BASE_URL=http://mockkenari:9090/v1 dan KENARI_API_KEY=mock di .env
+# Kibana untuk eksplorasi system log: docker compose --profile kibana up (buka :5601)
 services:
   db:
     image: postgres:16-alpine
@@ -19,10 +20,12 @@ services:
     environment:
       DATABASE_URL: postgres://racik:racik@db:5432/racik?sslmode=disable
       UPLOAD_DIR: /data/uploads
+      LOG_ES_URL: http://elasticsearch:9200
     volumes:
       - uploads:/data
     depends_on:
       - db
+      - elasticsearch
     ports:
       - "8080:8080"
 
@@ -36,6 +39,30 @@ services:
     ports:
       - "3000:3000"
 
+  # System log (activity user & request ke vendor AI). Single node tanpa security —
+  # jangan buka port 9200 ke internet; untuk production aktifkan xpack.security dan isi
+  # LOG_ES_USER/LOG_ES_PASSWORD atau LOG_ES_API_KEY.
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "127.0.0.1:9200:9200"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    profiles: ["kibana"]
+    ports:
+      - "127.0.0.1:5601:5601"
+
   mockkenari:
     build: ./backend
     command: ["mockkenari"]
@@ -46,3 +73,4 @@ services:
 volumes:
   pgdata:
   uploads:
+  esdata:

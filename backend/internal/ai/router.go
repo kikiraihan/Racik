@@ -48,6 +48,50 @@ type Router struct {
 	order     []string
 	textDef   string
 	imageDef  string
+
+	// Observe dipanggil setelah setiap request ke vendor AI (untuk log vendor). Opsional.
+	Observe func(ctx context.Context, c Call)
+}
+
+// Call: ringkasan satu request ke vendor AI.
+type Call struct {
+	Choice    string // "<provider>:<model>"
+	Provider  string
+	Model     string
+	Operation string // chat | image | edit
+	Prompt    string // prompt terakhir dari user (dipotong oleh pencatat log)
+	Duration  time.Duration
+	Err       error
+	OutBytes  int // panjang jawaban teks / ukuran gambar
+}
+
+func (r *Router) observe(ctx context.Context, c Call, start time.Time) {
+	if r.Observe == nil {
+		return
+	}
+	c.Provider, c.Model = SplitChoice(c.Choice)
+	c.Duration = time.Since(start)
+	r.Observe(ctx, c)
+}
+
+// lastUserText: isi teks pesan user terakhir, untuk dicatat di log vendor.
+func lastUserText(msgs []Message) string {
+	for i := len(msgs) - 1; i >= 0; i-- {
+		if msgs[i].Role != "user" {
+			continue
+		}
+		switch c := msgs[i].Content.(type) {
+		case string:
+			return c
+		case []ContentPart:
+			for _, p := range c {
+				if p.Text != "" {
+					return p.Text
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func NewRouter() *Router { return &Router{providers: map[string]*Provider{}} }
@@ -148,7 +192,10 @@ func (r *Router) provider(choice string) (*Provider, string, error) {
 	return p, model, nil
 }
 
-func (r *Router) Chat(ctx context.Context, choice string, msgs []Message, maxTokens int) (string, error) {
+func (r *Router) Chat(ctx context.Context, choice string, msgs []Message, maxTokens int) (text string, err error) {
+	defer func(start time.Time) {
+		r.observe(ctx, Call{Choice: choice, Operation: "chat", Prompt: lastUserText(msgs), Err: err, OutBytes: len(text)}, start)
+	}(time.Now())
 	p, model, err := r.provider(choice)
 	if err != nil {
 		return "", err
@@ -159,7 +206,10 @@ func (r *Router) Chat(ctx context.Context, choice string, msgs []Message, maxTok
 	return p.Text.Chat(ctx, model, msgs, maxTokens)
 }
 
-func (r *Router) GenerateImage(ctx context.Context, choice, prompt string, width, height int) (*Image, error) {
+func (r *Router) GenerateImage(ctx context.Context, choice, prompt string, width, height int) (img *Image, err error) {
+	defer func(start time.Time) {
+		r.observe(ctx, Call{Choice: choice, Operation: "image", Prompt: prompt, Err: err, OutBytes: imageSize(img)}, start)
+	}(time.Now())
 	p, model, err := r.provider(choice)
 	if err != nil {
 		return nil, err
@@ -170,7 +220,10 @@ func (r *Router) GenerateImage(ctx context.Context, choice, prompt string, width
 	return p.Image.GenerateImage(ctx, model, prompt, width, height)
 }
 
-func (r *Router) EditImage(ctx context.Context, choice, prompt string, src *Image) (*Image, error) {
+func (r *Router) EditImage(ctx context.Context, choice, prompt string, src *Image) (img *Image, err error) {
+	defer func(start time.Time) {
+		r.observe(ctx, Call{Choice: choice, Operation: "edit", Prompt: prompt, Err: err, OutBytes: imageSize(img)}, start)
+	}(time.Now())
 	p, model, err := r.provider(choice)
 	if err != nil {
 		return nil, err
@@ -179,6 +232,13 @@ func (r *Router) EditImage(ctx context.Context, choice, prompt string, src *Imag
 		return nil, fmt.Errorf("%s tidak bisa edit gambar, pilih model gambar kenari atau OpenRouter", p.Label)
 	}
 	return p.Edit.EditImage(ctx, model, prompt, src)
+}
+
+func imageSize(img *Image) int {
+	if img == nil {
+		return 0
+	}
+	return len(img.Data)
 }
 
 // CheckModels mencocokkan model di env dengan daftar /models provider yang menyediakannya

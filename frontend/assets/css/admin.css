@@ -1,0 +1,17 @@
+/* Gaya bersama panel admin (tabel, kartu, toolbar). */
+.adm .sec { padding: 18px; margin-bottom: 16px; }
+.adm .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.adm .tbl-wrap { overflow-x: auto; }
+.adm .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.adm .tbl th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.adm .tbl td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.adm .r { text-align: right; }
+.adm .nowrap { white-space: nowrap; }
+.adm .small { font-size: 12px; }
+.adm .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); white-space: nowrap; }
+.adm .tag.ok { background: #e7f8ee; color: var(--ok); }
+.adm .tag.bad { background: #fdecec; color: var(--danger); }
+.adm .tag.acc { background: var(--accent-soft); color: var(--accent); }
+.adm .tag.warn { background: #fff7e6; color: #8a5a00; }
+.adm .note { background: #fff7e6; border: 1px solid #ffd591; color: #8a5a00; padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+.adm .pager { display: flex; align-items: center; gap: 8px; justify-content: flex-end; margin-top: 10px; font-size: 13px; }

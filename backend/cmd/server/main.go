@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/kikiraihan/racik/backend/internal/ai"
+	"github.com/kikiraihan/racik/backend/internal/applog"
 	"github.com/kikiraihan/racik/backend/internal/config"
 	"github.com/kikiraihan/racik/backend/internal/db"
 	"github.com/kikiraihan/racik/backend/internal/handlers"
@@ -32,10 +33,29 @@ func main() {
 	if err := handlers.SeedTemplates(ctx, conn); err != nil {
 		log.Fatalf("seed template: %v", err)
 	}
+	if err := handlers.EnsureAdmins(ctx, conn, cfg); err != nil {
+		log.Fatalf("admin: %v", err)
+	}
+
+	// System log ke Elasticsearch (activity user & request ke vendor AI). Dijalankan dengan
+	// context terpisah supaya sisa log tetap terkirim saat shutdown.
+	logger := applog.New(applog.Config{
+		URL: cfg.LogESURL, User: cfg.LogESUser, Password: cfg.LogESPassword, APIKey: cfg.LogESAPIKey,
+		IndexPrefix: cfg.LogIndexPrefix, RetentionDays: cfg.LogRetentionDays,
+	})
+	logCtx, stopLog := context.WithCancel(context.Background())
+	go logger.Run(logCtx)
+	go func() {
+		setupCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		if err := logger.Setup(setupCtx); err != nil {
+			log.Printf("PERINGATAN log: setup index template Elasticsearch gagal: %v", err)
+		}
+	}()
 
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           handlers.New(conn, cfg).Routes(),
+		Handler:           handlers.New(conn, cfg, logger).Routes(),
 		ReadHeaderTimeout: 10 * time.Second,
 		// Write timeout dibuat panjang karena generate AI bisa memakan waktu lama.
 		// Magic Design = 1 panggilan teks + gambar (maks 4, paralel 3 → 2 putaran),
@@ -45,7 +65,7 @@ func main() {
 	}
 	go checkModels(ctx, cfg)
 	go func() {
-		log.Printf("Racik API berjalan di %s (AI kenari.id aktif: %v)", cfg.Addr, cfg.KenariAPIKey != "")
+		log.Printf("Racik API berjalan di %s (AI kenari.id aktif: %v, log Elasticsearch: %v)", cfg.Addr, cfg.KenariAPIKey != "", logger.Enabled())
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatal(err)
 		}
@@ -54,6 +74,8 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_ = srv.Shutdown(shutdownCtx)
+	stopLog()
+	logger.Wait(10 * time.Second)
 	log.Println("server berhenti")
 }
 

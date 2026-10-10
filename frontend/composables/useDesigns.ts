@@ -8,8 +8,6 @@ export interface AIDesignInput {
   height: number
   pages: number
   style?: string
-  textModel?: string
-  imageModel?: string
   generateImages: boolean
 }
 
@@ -28,6 +26,7 @@ export function useDesigns() {
   async function generate(input: AIDesignInput) {
     await api.ensureSession()
     const res = await api.post<{ generationId: string; spec: any; warnings: string[] }>('/api/ai/design', input)
+      .finally(() => api.refreshUser()) // saldo terpotong (atau dikembalikan kalau gagal)
     const title = res.spec?.title || input.prompt.slice(0, 60)
     const d = await api.post<DesignSummary>('/api/designs', {
       title, width: input.width, height: input.height,

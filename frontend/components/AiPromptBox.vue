@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Kotak prompt utama: tujuan pertama user = auto-bikin desain dari AI.
 import { SIZE_PRESETS, STYLE_PRESETS, findPreset } from '~/lib/presets'
-import type { AIModels } from '~/composables/useApi'
+import { rupiah, type AIModels } from '~/composables/useApi'
 
 const api = useApi()
 const toast = useToast()
@@ -29,19 +29,26 @@ const type = ref('presentation')
 const pages = ref(6)
 const style = ref('')
 const withImages = ref(true)
+// Model AI diatur admin; user hanya melihat status layanan & tarif.
 const models = ref<AIModels | null>(null)
-const imageModel = ref('')
-const textModel = ref('')
 const loading = ref(false)
+const lowBalance = ref(false)
 const step = ref(0)
-const STEPS = ['Memahami brief kamu…', 'Claude menyusun layout & copy…', 'Membuat gambar dengan AI…', 'Merapikan di editor…']
+const STEPS = ['Memahami brief kamu…', 'AI menyusun layout & copy…', 'Membuat gambar dengan AI…', 'Merapikan di editor…']
 
 onMounted(async () => {
   try {
     models.value = await api.get<AIModels>('/api/ai/models')
-    imageModel.value = models.value.imageModel
-    textModel.value = models.value.textModel
   } catch {}
+})
+
+// Perkiraan biaya: 1x susun layout + per gambar yang berhasil dibuat (maks N gambar).
+const costHint = computed(() => {
+  const p = models.value?.prices
+  if (!p) return ''
+  return withImages.value
+    ? `Biaya ${rupiah(p.text)} + ${rupiah(p.image)}/gambar (maks ${models.value!.maxImagesPerDesign} gambar)`
+    : `Biaya ${rupiah(p.text)}`
 })
 
 const preset = computed(() => findPreset(type.value) || SIZE_PRESETS[0])
@@ -54,15 +61,16 @@ async function submit() {
     return
   }
   loading.value = true
+  lowBalance.value = false
   step.value = 0
   timer = setInterval(() => (step.value = Math.min(step.value + 1, withImages.value ? 3 : 1)), withImages.value ? 6000 : 4000)
   try {
     await generate({
       prompt: prompt.value, designType: type.value, width: preset.value.width, height: preset.value.height,
       pages: isMulti.value ? pages.value : 1, style: style.value, generateImages: withImages.value,
-      imageModel: imageModel.value, textModel: textModel.value,
     })
   } catch (e: any) {
+    lowBalance.value = e.code === 'insufficient_balance'
     toast.error(e.message)
   } finally {
     clearInterval(timer)
@@ -92,12 +100,7 @@ async function submit() {
       <label class="row opt tog">
         <input v-model="withImages" type="checkbox" /> Buat gambar AI
       </label>
-      <select v-if="withImages && models" v-model="imageModel" class="select sm opt" style="width: 190px" title="Model gambar">
-        <option v-for="m in models.imageModels" :key="m" :value="m">{{ models.labels?.[m] ?? m }}</option>
-      </select>
-      <select v-if="models && models.textModels.length > 1" v-model="textModel" class="select sm opt" style="width: 170px" title="Model teks">
-        <option v-for="m in models.textModels" :key="m" :value="m">{{ models.labels?.[m] ?? m }}</option>
-      </select>
+      <span v-if="costHint" class="muted cost">{{ costHint }}</span>
       <div class="grow" />
       <button class="btn grad go" :disabled="loading" @click="submit">
         <span v-if="loading" class="spin" />
@@ -106,7 +109,10 @@ async function submit() {
       </button>
     </div>
     <div v-if="models && !models.configured" class="warn">
-      Konektor AI belum aktif. Isi <code>KENARI_API_KEY</code> (atau API key provider lain: Anthropic, Groq, NVIDIA, Agnes, OpenRouter) di backend (lihat README) — atau jalankan mock AI untuk demo.
+      Layanan AI belum tersedia. Hubungi admin.
+    </div>
+    <div v-if="lowBalance" class="warn">
+      Saldo kamu tidak cukup untuk generate desain. <NuxtLink to="/wallet" class="lnk">Lihat saldo &amp; top up →</NuxtLink>
     </div>
     <div v-if="loading" class="progress">
       <div v-for="(s, i) in STEPS" :key="s" class="st" :class="{ done: i < step, cur: i === step }">
@@ -128,6 +134,8 @@ async function submit() {
 .opt { font-size: 13px; }
 .tog { cursor: pointer; user-select: none; }
 .go { height: 42px; padding: 0 20px; font-size: 15px; border-radius: 10px; }
+.cost { font-size: 12px; }
+.lnk { color: var(--accent); font-weight: 600; }
 .warn { margin-top: 10px; background: #fff7e6; border: 1px solid #ffd591; color: #8a5a00; padding: 8px 12px; border-radius: 8px; font-size: 13px; }
 .ex { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; align-items: center; font-size: 13px; }
 .exb { border: 1px dashed var(--line); background: var(--panel-2); border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 12px; color: var(--ink-2); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

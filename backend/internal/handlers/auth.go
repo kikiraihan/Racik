@@ -22,6 +22,8 @@ type userDTO struct {
 	Email   string `json:"email"`
 	Name    string `json:"name"`
 	IsGuest bool   `json:"isGuest"`
+	Role    string `json:"role"`    // user | admin
+	Balance int64  `json:"balance"` // saldo (Rupiah)
 }
 
 type credentials struct {
@@ -41,7 +43,13 @@ func (c *credentials) validate() error {
 	return nil
 }
 
-func (s *Server) issue(w http.ResponseWriter, status int, u userDTO) {
+func (s *Server) issue(w http.ResponseWriter, r *http.Request, status int, u userDTO) {
+	if u.Role == "" {
+		u.Role = RoleUser
+	}
+	if a := httpx.ActivityFrom(r.Context()); a != nil {
+		a.SetUser(u.ID, u.Email)
+	}
 	tok, err := auth.Sign(s.Cfg.JWTSecret, u.ID, u.Email, tokenTTL)
 	if err != nil {
 		httpx.Error(w, 500, "gagal membuat token")
@@ -70,9 +78,13 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 500, "gagal memproses password")
 		return
 	}
-	u := userDTO{Email: c.Email, Name: strings.TrimSpace(c.Name)}
+	u := userDTO{Email: c.Email, Name: strings.TrimSpace(c.Name), Role: RoleUser}
+	if s.isAdminEmail(u.Email) {
+		u.Role = RoleAdmin
+	}
+	activity(r, "email", u.Email)
 	err = s.DB.QueryRowContext(r.Context(),
-		`INSERT INTO users(email, name, password_hash) VALUES($1,$2,$3) RETURNING id`, u.Email, u.Name, hash).Scan(&u.ID)
+		`INSERT INTO users(email, name, password_hash, role) VALUES($1,$2,$3,$4) RETURNING id`, u.Email, u.Name, hash, u.Role).Scan(&u.ID)
 	if isUniqueViolation(err) {
 		httpx.Error(w, 409, "email sudah terdaftar")
 		return
@@ -81,7 +93,7 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 500, err.Error())
 		return
 	}
-	s.issue(w, 201, u)
+	s.issue(w, r, 201, u)
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
@@ -91,11 +103,21 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.Email = strings.ToLower(strings.TrimSpace(c.Email))
+	// Email yang dicoba selalu dicatat (juga saat gagal) untuk mendeteksi brute force.
+	activity(r, "email", c.Email)
 	var u userDTO
 	var hash string
 	err := s.DB.QueryRowContext(r.Context(),
-		`SELECT id, email, name, password_hash, is_guest FROM users WHERE email=$1`, c.Email).Scan(&u.ID, &u.Email, &u.Name, &hash, &u.IsGuest)
-	if errors.Is(err, sql.ErrNoRows) || (err == nil && !auth.CheckPassword(hash, c.Password)) {
+		`SELECT id, email, name, password_hash, is_guest, role, balance FROM users WHERE email=$1`, c.Email).
+		Scan(&u.ID, &u.Email, &u.Name, &hash, &u.IsGuest, &u.Role, &u.Balance)
+	if errors.Is(err, sql.ErrNoRows) {
+		activity(r, "reason", "email_not_found")
+		httpx.Error(w, 401, "email atau password salah")
+		return
+	}
+	if err == nil && !auth.CheckPassword(hash, c.Password) {
+		activity(r, "reason", "wrong_password")
+		activity(r, "target_user_id", u.ID)
 		httpx.Error(w, 401, "email atau password salah")
 		return
 	}
@@ -103,7 +125,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 500, err.Error())
 		return
 	}
-	s.issue(w, 200, u)
+	if u.Role != RoleAdmin && s.isAdminEmail(u.Email) {
+		if _, err := s.DB.ExecContext(r.Context(), `UPDATE users SET role='admin' WHERE id=$1`, u.ID); err == nil {
+			u.Role = RoleAdmin
+		}
+	}
+	activity(r, "role", u.Role)
+	s.issue(w, r, 200, u)
 }
 
 // guest membuat akun tamu agar user baru bisa langsung auto-generate desain
@@ -111,14 +139,14 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 func (s *Server) guest(w http.ResponseWriter, r *http.Request) {
 	b := make([]byte, 8)
 	rand.Read(b)
-	u := userDTO{Email: "guest-" + hex.EncodeToString(b) + "@guest.racik", Name: "Tamu", IsGuest: true}
+	u := userDTO{Email: "guest-" + hex.EncodeToString(b) + "@guest.racik", Name: "Tamu", IsGuest: true, Role: RoleUser}
 	hash, _ := auth.HashPassword(hex.EncodeToString(b) + time.Now().String())
 	if err := s.DB.QueryRowContext(r.Context(),
 		`INSERT INTO users(email, name, password_hash, is_guest) VALUES($1,$2,$3,true) RETURNING id`, u.Email, u.Name, hash).Scan(&u.ID); err != nil {
 		httpx.Error(w, 500, err.Error())
 		return
 	}
-	s.issue(w, 201, u)
+	s.issue(w, r, 201, u)
 }
 
 // upgradeGuest mengubah akun tamu menjadi akun permanen (desain tetap tersimpan).
@@ -134,9 +162,14 @@ func (s *Server) upgradeGuest(w http.ResponseWriter, r *http.Request) {
 	}
 	hash, _ := auth.HashPassword(c.Password)
 	cu := httpx.CurrentUser(r)
-	u := userDTO{ID: cu.ID, Email: c.Email, Name: strings.TrimSpace(c.Name)}
+	u := userDTO{ID: cu.ID, Email: c.Email, Name: strings.TrimSpace(c.Name), Role: RoleUser}
+	if s.isAdminEmail(u.Email) {
+		u.Role = RoleAdmin
+	}
+	activity(r, "email", u.Email)
+	activity(r, "guest_email", cu.Email)
 	res, err := s.DB.ExecContext(r.Context(),
-		`UPDATE users SET email=$1, name=$2, password_hash=$3, is_guest=false WHERE id=$4 AND is_guest`, u.Email, u.Name, hash, cu.ID)
+		`UPDATE users SET email=$1, name=$2, password_hash=$3, is_guest=false, role=$5 WHERE id=$4 AND is_guest`, u.Email, u.Name, hash, cu.ID, u.Role)
 	if isUniqueViolation(err) {
 		httpx.Error(w, 409, "email sudah terdaftar")
 		return
@@ -149,13 +182,14 @@ func (s *Server) upgradeGuest(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 400, "akun ini bukan akun tamu")
 		return
 	}
-	s.issue(w, 200, u)
+	_ = s.DB.QueryRowContext(r.Context(), `SELECT balance FROM users WHERE id=$1`, u.ID).Scan(&u.Balance)
+	s.issue(w, r, 200, u)
 }
 
 func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 	var u userDTO
-	err := s.DB.QueryRowContext(r.Context(), `SELECT id, email, name, is_guest FROM users WHERE id=$1`, httpx.CurrentUser(r).ID).
-		Scan(&u.ID, &u.Email, &u.Name, &u.IsGuest)
+	err := s.DB.QueryRowContext(r.Context(), `SELECT id, email, name, is_guest, role, balance FROM users WHERE id=$1`, httpx.CurrentUser(r).ID).
+		Scan(&u.ID, &u.Email, &u.Name, &u.IsGuest, &u.Role, &u.Balance)
 	if err != nil {
 		httpx.Error(w, 401, "user tidak ditemukan")
 		return
