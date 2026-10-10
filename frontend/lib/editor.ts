@@ -113,7 +113,7 @@ export class Editor {
     height: 1080,
     zoom: 0.5,
     pageIndex: 0,
-    pages: [] as { id: string; name: string; thumb: string }[],
+    pages: [] as { id: string; name: string; thumb: string; x?: number; y?: number }[],
     layers: [] as LayerItem[],
     sel: emptySel(),
     canUndo: false,
@@ -281,17 +281,29 @@ export class Editor {
     this.onChange()
   }
 
+  /** Pindahkan frame halaman di board (unit desain). */
+  setPagePos(i: number, x: number, y: number) {
+    const p = this.pages[i]
+    if (!p) return
+    p.x = Math.round(x)
+    p.y = Math.round(y)
+    const item = this.state.pages.find((s) => s.id === p.id)
+    if (item) Object.assign(item, { x: p.x, y: p.y })
+    this.onChange()
+  }
+
   async updateThumb(i: number) {
     const p = this.pages[i]
     if (!p) return
-    const url = await renderPageToDataURL(p, this.width, this.height, { format: 'jpeg', quality: 0.7, multiplier: 160 / this.width })
+    // Thumbnail juga dipakai sebagai pratinjau frame halaman non-aktif di board, jadi dibuat lebih tajam.
+    const url = await renderPageToDataURL(p, this.width, this.height, { format: 'jpeg', quality: 0.8, multiplier: Math.min(1, 720 / this.width) })
     const item = this.state.pages.find((x) => x.id === p.id)
     if (item) item.thumb = url
   }
 
   async refreshThumbs() {
     const old = new Map(this.state.pages.map((p) => [p.id, p.thumb]))
-    this.state.pages = this.pages.map((p) => ({ id: p.id, name: p.name, thumb: old.get(p.id) || '' }))
+    this.state.pages = this.pages.map((p) => ({ id: p.id, name: p.name, thumb: old.get(p.id) || '', x: p.x, y: p.y }))
     for (let i = 0; i < this.pages.length; i++) await this.updateThumb(i)
   }
 

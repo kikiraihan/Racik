@@ -25,3 +25,17 @@ export function useDoc() {
   if (!d) throw new Error('Doc belum tersedia')
   return d
 }
+
+/** Satu giliran instruksi ke AI dari kotak chat editor (ditampilkan di tab Riwayat). */
+export interface AiTurn {
+  id: string
+  mode: 'refine' | 'design' | 'image'
+  prompt: string
+  status: 'busy' | 'ok' | 'error'
+  message: string
+  at: number
+}
+
+export function useAiTurns() {
+  return useState<AiTurn[]>('editorAiTurns', () => [])
+}

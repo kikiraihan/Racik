@@ -10,6 +10,8 @@ export interface PageData {
   id: string
   name: string
   fabric: any // JSON canvas fabric (toObject)
+  x?: number // posisi frame di board editor (unit desain); kosong = diatur otomatis berjajar
+  y?: number
 }
 
 export interface DesignData {
