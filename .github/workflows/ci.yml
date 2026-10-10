@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+  # Dipanggil oleh deploy.yml supaya deploy hanya jalan kalau CI hijau.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: Backend (Go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: gofmt
+        working-directory: backend
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then
+            echo "File berikut belum di-gofmt (jalankan: make fmt):"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: go vet
+        working-directory: backend
+        run: go vet ./...
+
+      - name: go build
+        working-directory: backend
+        run: go build ./...
+
+      - name: go test
+        working-directory: backend
+        run: go test ./...
+
+  frontend:
+    name: Frontend (Nuxt)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm ci
+        working-directory: frontend
+        run: npm ci
+
+      - name: nuxi typecheck
+        working-directory: frontend
+        run: npx nuxi typecheck
+
+      - name: npm run build
+        working-directory: frontend
+        run: npm run build
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build kedua image seperti di VPS, supaya error Dockerfile ketahuan
+      # sebelum deploy menyentuh server produksi.
+      - name: Build image backend
+        run: docker build -t racik-backend:ci ./backend
+
+      - name: Build image frontend
+        run: docker build -t racik-frontend:ci --build-arg NUXT_API_TARGET=http://backend:8080 ./frontend
+
+      - name: Validasi docker-compose.yml
+        run: |
+          cp .env.example .env
+          docker compose config --quiet

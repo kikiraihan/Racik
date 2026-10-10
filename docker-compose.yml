@@ -1,57 +1,95 @@
-# Jalankan semua: docker compose up --build
+# Jalankan semua: docker compose up --build   (buka http://localhost:${APP_PORT}, default 8091)
 # Demo tanpa API key kenari.id: docker compose --profile demo up --build
 #   lalu set KENARI_BASE_URL=http://mockkenari:9090/v1 dan KENARI_API_KEY=mock di .env
-# Kibana untuk eksplorasi system log: docker compose --profile kibana up (buka :5601)
+# Kibana untuk eksplorasi system log: docker compose --profile kibana up
+#   (port host-nya acak di 127.0.0.1, lihat dengan: docker compose port kibana 5601)
+#
+# Production (VPS yang dipakai bareng katilidev & our-life-planner): lihat DEPLOY.md.
+# Hanya SATU port yang dipublish ke host — frontend di 127.0.0.1:${APP_PORT} — lalu
+# nginx host yang proxy_pass ke situ. Semua service lain cuma bisa dijangkau lewat
+# network internal docker, supaya tidak bentrok port dengan app lain di VPS yang sama.
+#
+# Nama project dikunci supaya nama volume (racik_pgdata, racik_uploads, racik_esdata)
+# tidak bergantung pada nama folder clone.
+name: racik
+
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: racik
-      POSTGRES_PASSWORD: racik
+      # Hanya berlaku saat volume pgdata pertama kali dibuat. Ganti DB_PASSWORD
+      # sesudahnya = ganti juga password user racik di dalam Postgres (lihat DEPLOY.md).
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-racik}
       POSTGRES_DB: racik
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U racik -d racik"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     ports:
-      - "5432:5432"
+      # Hanya di localhost. DB_HOST_PORT kosong = Docker memilih port bebas secara acak
+      # (lihat: docker compose port db 5432), jadi tidak pernah bentrok dengan Postgres
+      # app lain di VPS (katilidev memakai 5433). Isi DB_HOST_PORT=5432 di .env kalau
+      # backend dijalankan lokal dengan `go run` (opsi B di README).
+      # Perhatikan tanda `-` tunggal: dengan `:-`, nilai kosong akan jatuh ke default.
+      - "127.0.0.1:${DB_HOST_PORT-}:5432"
 
   backend:
     build: ./backend
+    restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgres://racik:racik@db:5432/racik?sslmode=disable
+      DATABASE_URL: postgres://racik:${DB_PASSWORD:-racik}@db:5432/racik?sslmode=disable
       UPLOAD_DIR: /data/uploads
       LOG_ES_URL: http://elasticsearch:9200
     volumes:
       - uploads:/data
     depends_on:
-      - db
-      - elasticsearch
-    ports:
-      - "8080:8080"
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    # Tidak ada `ports:` dengan sengaja — backend hanya dijangkau frontend (proxy
+    # /api & /uploads) lewat network internal docker.
 
   frontend:
     build:
       context: ./frontend
       args:
         NUXT_API_TARGET: http://backend:8080
+    restart: unless-stopped
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+      # Hanya di localhost VPS — nginx host (+ Cloudflare di depannya) yang bicara ke
+      # internet dan proxy_pass subdomain ke port ini. Lihat DEPLOY.md.
+      - "127.0.0.1:${APP_PORT:-8091}:3000"
 
   # System log (activity user & request ke vendor AI). Single node tanpa security —
-  # jangan buka port 9200 ke internet; untuk production aktifkan xpack.security dan isi
+  # port 9200 tidak dibuka ke internet (hanya 127.0.0.1, port acak kecuali ES_HOST_PORT
+  # diisi); untuk ES terpisah/Elastic Cloud aktifkan security dan isi
   # LOG_ES_USER/LOG_ES_PASSWORD atau LOG_ES_API_KEY.
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    restart: unless-stopped
     environment:
       discovery.type: single-node
       xpack.security.enabled: "false"
-      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms512m -Xmx512m}
     volumes:
       - esdata:/usr/share/elasticsearch/data
     ports:
-      - "127.0.0.1:9200:9200"
+      - "127.0.0.1:${ES_HOST_PORT-}:9200"
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.15.3
@@ -61,14 +99,15 @@ services:
       - elasticsearch
     profiles: ["kibana"]
     ports:
-      - "127.0.0.1:5601:5601"
+      - "127.0.0.1:${KIBANA_HOST_PORT-}:5601"
 
   mockkenari:
     build: ./backend
     command: ["mockkenari"]
     profiles: ["demo"]
+    # Dijangkau backend lewat network internal (http://mockkenari:9090/v1).
     ports:
-      - "9090:9090"
+      - "127.0.0.1:${MOCKKENARI_HOST_PORT-}:9090"
 
 volumes:
   pgdata:
