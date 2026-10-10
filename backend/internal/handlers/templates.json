@@ -1,0 +1,974 @@
+[
+ {
+  "slug": "ig-promo-sale",
+  "title": "Promo Diskon Besar",
+  "category": "Instagram Post",
+  "width": 1080,
+  "height": 1080,
+  "spec": {
+   "title": "Promo Diskon Besar",
+   "palette": [
+    "#FF5A5F",
+    "#FFD166",
+    "#1B1B3A",
+    "#FFFFFF"
+   ],
+   "fonts": {
+    "heading": "Anton",
+    "body": "Poppins"
+   },
+   "pages": [
+    {
+     "name": "Promo",
+     "background": {
+      "type": "gradient",
+      "colors": [
+       "#FF5A5F",
+       "#FF9A5A"
+      ],
+      "angle": 135
+     },
+     "elements": [
+      {
+       "type": "circle",
+       "x": -180,
+       "y": -180,
+       "w": 560,
+       "h": 560,
+       "fill": "#FFD166",
+       "opacity": 0.35
+      },
+      {
+       "type": "circle",
+       "x": 760,
+       "y": 760,
+       "w": 520,
+       "h": 520,
+       "fill": "#1B1B3A",
+       "opacity": 0.2
+      },
+      {
+       "type": "text",
+       "text": "MEGA SALE",
+       "x": 80,
+       "y": 250,
+       "w": 920,
+       "fontSize": 170,
+       "fontFamily": "Anton",
+       "color": "#FFFFFF",
+       "align": "center",
+       "fontWeight": "normal",
+       "letterSpacing": 40
+      },
+      {
+       "type": "text",
+       "text": "Diskon hingga",
+       "x": 80,
+       "y": 470,
+       "w": 920,
+       "fontSize": 54,
+       "fontFamily": "Poppins",
+       "color": "#1B1B3A",
+       "align": "center",
+       "fontWeight": "600"
+      },
+      {
+       "type": "text",
+       "text": "70%",
+       "x": 80,
+       "y": 530,
+       "w": 920,
+       "fontSize": 220,
+       "fontFamily": "Anton",
+       "color": "#FFD166",
+       "align": "center"
+      },
+      {
+       "type": "rect",
+       "x": 340,
+       "y": 830,
+       "w": 400,
+       "h": 96,
+       "fill": "#1B1B3A",
+       "radius": 48
+      },
+      {
+       "type": "text",
+       "text": "BELANJA SEKARANG",
+       "x": 340,
+       "y": 858,
+       "w": 400,
+       "fontSize": 34,
+       "fontFamily": "Poppins",
+       "color": "#FFFFFF",
+       "align": "center",
+       "fontWeight": "bold",
+       "role": "button"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "slug": "ig-quote-minimal",
+  "title": "Quote Minimalis",
+  "category": "Instagram Post",
+  "width": 1080,
+  "height": 1080,
+  "spec": {
+   "title": "Quote Minimalis",
+   "palette": [
+    "#F5EFE6",
+    "#2D2A26",
+    "#C8A27C"
+   ],
+   "fonts": {
+    "heading": "Playfair Display",
+    "body": "Lato"
+   },
+   "pages": [
+    {
+     "name": "Quote",
+     "background": {
+      "type": "color",
+      "color": "#F5EFE6"
+     },
+     "elements": [
+      {
+       "type": "text",
+       "text": "“",
+       "x": 100,
+       "y": 120,
+       "w": 200,
+       "fontSize": 260,
+       "fontFamily": "Playfair Display",
+       "color": "#C8A27C"
+      },
+      {
+       "type": "text",
+       "text": "Kesederhanaan adalah kecanggihan tertinggi.",
+       "x": 120,
+       "y": 360,
+       "w": 840,
+       "fontSize": 84,
+       "fontFamily": "Playfair Display",
+       "color": "#2D2A26",
+       "italic": true,
+       "lineHeight": 1.2
+      },
+      {
+       "type": "line",
+       "x": 120,
+       "y": 700,
+       "w": 160,
+       "stroke": "#C8A27C",
+       "strokeWidth": 6
+      },
+      {
+       "type": "text",
+       "text": "LEONARDO DA VINCI",
+       "x": 120,
+       "y": 740,
+       "w": 840,
+       "fontSize": 30,
+       "fontFamily": "Lato",
+       "color": "#2D2A26",
+       "fontWeight": "bold",
+       "letterSpacing": 300
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "slug": "story-event",
+  "title": "Story Event",
+  "category": "Story",
+  "width": 1080,
+  "height": 1920,
+  "spec": {
+   "title": "Story Event",
+   "palette": [
+    "#0F172A",
+    "#22D3EE",
+    "#A78BFA",
+    "#FFFFFF"
+   ],
+   "fonts": {
+    "heading": "Space Grotesk",
+    "body": "Inter"
+   },
+   "pages": [
+    {
+     "name": "Event",
+     "background": {
+      "type": "gradient",
+      "colors": [
+       "#0F172A",
+       "#312E81"
+      ],
+      "angle": 180
+     },
+     "elements": [
+      {
+       "type": "circle",
+       "x": 600,
+       "y": -200,
+       "w": 700,
+       "h": 700,
+       "fill": "#A78BFA",
+       "opacity": 0.35
+      },
+      {
+       "type": "circle",
+       "x": -250,
+       "y": 1300,
+       "w": 700,
+       "h": 700,
+       "fill": "#22D3EE",
+       "opacity": 0.25
+      },
+      {
+       "type": "text",
+       "text": "WEBINAR GRATIS",
+       "x": 100,
+       "y": 420,
+       "w": 880,
+       "fontSize": 40,
+       "fontFamily": "Inter",
+       "color": "#22D3EE",
+       "fontWeight": "bold",
+       "letterSpacing": 300
+      },
+      {
+       "type": "text",
+       "text": "Belajar Desain dengan AI",
+       "x": 100,
+       "y": 500,
+       "w": 880,
+       "fontSize": 112,
+       "fontFamily": "Space Grotesk",
+       "color": "#FFFFFF",
+       "fontWeight": "bold",
+       "lineHeight": 1.05
+      },
+      {
+       "type": "text",
+       "text": "Sabtu, 20 Desember • 19.00 WIB\nVia Zoom",
+       "x": 100,
+       "y": 1000,
+       "w": 880,
+       "fontSize": 46,
+       "fontFamily": "Inter",
+       "color": "#E2E8F0",
+       "lineHeight": 1.4
+      },
+      {
+       "type": "rect",
+       "x": 100,
+       "y": 1500,
+       "w": 880,
+       "h": 140,
+       "fill": "#22D3EE",
+       "radius": 70
+      },
+      {
+       "type": "text",
+       "text": "Daftar Sekarang →",
+       "x": 100,
+       "y": 1545,
+       "w": 880,
+       "fontSize": 46,
+       "fontFamily": "Inter",
+       "color": "#0F172A",
+       "align": "center",
+       "fontWeight": "bold",
+       "role": "button"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "slug": "pres-pitch-deck",
+  "title": "Pitch Deck Modern",
+  "category": "Presentasi",
+  "width": 1920,
+  "height": 1080,
+  "spec": {
+   "title": "Pitch Deck Modern",
+   "palette": [
+    "#4F46E5",
+    "#111827",
+    "#F3F4F6",
+    "#10B981"
+   ],
+   "fonts": {
+    "heading": "Montserrat",
+    "body": "Inter"
+   },
+   "pages": [
+    {
+     "name": "Judul",
+     "background": {
+      "type": "gradient",
+      "colors": [
+       "#4F46E5",
+       "#7C3AED"
+      ],
+      "angle": 120
+     },
+     "elements": [
+      {
+       "type": "circle",
+       "x": 1300,
+       "y": -300,
+       "w": 900,
+       "h": 900,
+       "fill": "#FFFFFF",
+       "opacity": 0.08
+      },
+      {
+       "type": "text",
+       "text": "NAMA STARTUP",
+       "x": 160,
+       "y": 360,
+       "w": 1400,
+       "fontSize": 40,
+       "fontFamily": "Inter",
+       "color": "#C7D2FE",
+       "fontWeight": "bold",
+       "letterSpacing": 300
+      },
+      {
+       "type": "text",
+       "text": "Solusi cerdas untuk\nmasalah besar",
+       "x": 160,
+       "y": 430,
+       "w": 1500,
+       "fontSize": 120,
+       "fontFamily": "Montserrat",
+       "color": "#FFFFFF",
+       "fontWeight": "800",
+       "lineHeight": 1.1
+      },
+      {
+       "type": "text",
+       "text": "Pitch Deck 2026",
+       "x": 160,
+       "y": 780,
+       "w": 800,
+       "fontSize": 40,
+       "fontFamily": "Inter",
+       "color": "#E0E7FF"
+      }
+     ]
+    },
+    {
+     "name": "Masalah",
+     "background": {
+      "type": "color",
+      "color": "#F3F4F6"
+     },
+     "elements": [
+      {
+       "type": "rect",
+       "x": 0,
+       "y": 0,
+       "w": 24,
+       "h": 1080,
+       "fill": "#4F46E5"
+      },
+      {
+       "type": "text",
+       "text": "Masalah",
+       "x": 160,
+       "y": 140,
+       "w": 1600,
+       "fontSize": 90,
+       "fontFamily": "Montserrat",
+       "color": "#111827",
+       "fontWeight": "800"
+      },
+      {
+       "type": "text",
+       "text": "• Proses manual memakan waktu berjam-jam\n• Biaya operasional terus meningkat\n• Data tersebar dan sulit dianalisis",
+       "x": 160,
+       "y": 320,
+       "w": 1500,
+       "fontSize": 48,
+       "fontFamily": "Inter",
+       "color": "#374151",
+       "lineHeight": 1.7
+      }
+     ]
+    },
+    {
+     "name": "Solusi",
+     "background": {
+      "type": "color",
+      "color": "#FFFFFF"
+     },
+     "elements": [
+      {
+       "type": "text",
+       "text": "Solusi Kami",
+       "x": 160,
+       "y": 140,
+       "w": 1600,
+       "fontSize": 90,
+       "fontFamily": "Montserrat",
+       "color": "#111827",
+       "fontWeight": "800"
+      },
+      {
+       "type": "rect",
+       "x": 160,
+       "y": 330,
+       "w": 500,
+       "h": 500,
+       "fill": "#EEF2FF",
+       "radius": 32
+      },
+      {
+       "type": "rect",
+       "x": 710,
+       "y": 330,
+       "w": 500,
+       "h": 500,
+       "fill": "#ECFDF5",
+       "radius": 32
+      },
+      {
+       "type": "rect",
+       "x": 1260,
+       "y": 330,
+       "w": 500,
+       "h": 500,
+       "fill": "#FEF3C7",
+       "radius": 32
+      },
+      {
+       "type": "text",
+       "text": "Otomatis",
+       "x": 200,
+       "y": 380,
+       "w": 420,
+       "fontSize": 48,
+       "fontFamily": "Montserrat",
+       "color": "#4F46E5",
+       "fontWeight": "bold"
+      },
+      {
+       "type": "text",
+       "text": "Alur kerja berjalan sendiri tanpa input manual.",
+       "x": 200,
+       "y": 460,
+       "w": 420,
+       "fontSize": 34,
+       "fontFamily": "Inter",
+       "color": "#374151",
+       "lineHeight": 1.4
+      },
+      {
+       "type": "text",
+       "text": "Hemat",
+       "x": 750,
+       "y": 380,
+       "w": 420,
+       "fontSize": 48,
+       "fontFamily": "Montserrat",
+       "color": "#10B981",
+       "fontWeight": "bold"
+      },
+      {
+       "type": "text",
+       "text": "Potong biaya operasional hingga 40%.",
+       "x": 750,
+       "y": 460,
+       "w": 420,
+       "fontSize": 34,
+       "fontFamily": "Inter",
+       "color": "#374151",
+       "lineHeight": 1.4
+      },
+      {
+       "type": "text",
+       "text": "Terukur",
+       "x": 1300,
+       "y": 380,
+       "w": 420,
+       "fontSize": 48,
+       "fontFamily": "Montserrat",
+       "color": "#D97706",
+       "fontWeight": "bold"
+      },
+      {
+       "type": "text",
+       "text": "Dashboard real-time untuk setiap keputusan.",
+       "x": 1300,
+       "y": 460,
+       "w": 420,
+       "fontSize": 34,
+       "fontFamily": "Inter",
+       "color": "#374151",
+       "lineHeight": 1.4
+      }
+     ]
+    },
+    {
+     "name": "Penutup",
+     "background": {
+      "type": "color",
+      "color": "#111827"
+     },
+     "elements": [
+      {
+       "type": "text",
+       "text": "Terima kasih",
+       "x": 160,
+       "y": 400,
+       "w": 1600,
+       "fontSize": 130,
+       "fontFamily": "Montserrat",
+       "color": "#FFFFFF",
+       "fontWeight": "800",
+       "align": "center"
+      },
+      {
+       "type": "text",
+       "text": "halo@startup.id • startup.id",
+       "x": 160,
+       "y": 600,
+       "w": 1600,
+       "fontSize": 44,
+       "fontFamily": "Inter",
+       "color": "#9CA3AF",
+       "align": "center"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "slug": "yt-thumbnail",
+  "title": "Thumbnail YouTube",
+  "category": "YouTube",
+  "width": 1280,
+  "height": 720,
+  "spec": {
+   "title": "Thumbnail YouTube",
+   "palette": [
+    "#FACC15",
+    "#111111",
+    "#EF4444"
+   ],
+   "fonts": {
+    "heading": "Bebas Neue",
+    "body": "Inter"
+   },
+   "pages": [
+    {
+     "name": "Thumbnail",
+     "background": {
+      "type": "color",
+      "color": "#111111"
+     },
+     "elements": [
+      {
+       "type": "rect",
+       "x": 0,
+       "y": 0,
+       "w": 1280,
+       "h": 720,
+       "fill": "#FACC15",
+       "opacity": 0.08
+      },
+      {
+       "type": "star",
+       "x": 900,
+       "y": 80,
+       "w": 300,
+       "h": 300,
+       "fill": "#FACC15"
+      },
+      {
+       "type": "text",
+       "text": "10 TRIK",
+       "x": 70,
+       "y": 140,
+       "w": 800,
+       "fontSize": 170,
+       "fontFamily": "Bebas Neue",
+       "color": "#FACC15"
+      },
+      {
+       "type": "text",
+       "text": "CANVA YANG\nJARANG DIKETAHUI",
+       "x": 70,
+       "y": 320,
+       "w": 800,
+       "fontSize": 100,
+       "fontFamily": "Bebas Neue",
+       "color": "#FFFFFF",
+       "lineHeight": 0.95
+      },
+      {
+       "type": "rect",
+       "x": 70,
+       "y": 580,
+       "w": 260,
+       "h": 70,
+       "fill": "#EF4444",
+       "radius": 12
+      },
+      {
+       "type": "text",
+       "text": "WAJIB TAHU!",
+       "x": 70,
+       "y": 595,
+       "w": 260,
+       "fontSize": 40,
+       "fontFamily": "Inter",
+       "color": "#FFFFFF",
+       "align": "center",
+       "fontWeight": "800"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "slug": "poster-a4-seminar",
+  "title": "Poster Seminar",
+  "category": "Poster",
+  "width": 1240,
+  "height": 1754,
+  "spec": {
+   "title": "Poster Seminar",
+   "palette": [
+    "#064E3B",
+    "#34D399",
+    "#ECFDF5"
+   ],
+   "fonts": {
+    "heading": "DM Serif Display",
+    "body": "Nunito"
+   },
+   "pages": [
+    {
+     "name": "Poster",
+     "background": {
+      "type": "color",
+      "color": "#ECFDF5"
+     },
+     "elements": [
+      {
+       "type": "rect",
+       "x": 0,
+       "y": 0,
+       "w": 1240,
+       "h": 760,
+       "fill": "#064E3B"
+      },
+      {
+       "type": "circle",
+       "x": 820,
+       "y": 420,
+       "w": 640,
+       "h": 640,
+       "fill": "#34D399",
+       "opacity": 0.6
+      },
+      {
+       "type": "text",
+       "text": "SEMINAR NASIONAL",
+       "x": 100,
+       "y": 140,
+       "w": 900,
+       "fontSize": 40,
+       "fontFamily": "Nunito",
+       "color": "#34D399",
+       "fontWeight": "800",
+       "letterSpacing": 300
+      },
+      {
+       "type": "text",
+       "text": "Masa Depan\nEnergi Hijau",
+       "x": 100,
+       "y": 220,
+       "w": 900,
+       "fontSize": 130,
+       "fontFamily": "DM Serif Display",
+       "color": "#FFFFFF",
+       "lineHeight": 1.05
+      },
+      {
+       "type": "text",
+       "text": "Pembicara",
+       "x": 100,
+       "y": 880,
+       "w": 1040,
+       "fontSize": 40,
+       "fontFamily": "Nunito",
+       "color": "#064E3B",
+       "fontWeight": "800"
+      },
+      {
+       "type": "text",
+       "text": "Dr. Nama Pembicara — Peneliti Energi\nIr. Nama Pembicara — Praktisi Industri",
+       "x": 100,
+       "y": 940,
+       "w": 1040,
+       "fontSize": 40,
+       "fontFamily": "Nunito",
+       "color": "#065F46",
+       "lineHeight": 1.5
+      },
+      {
+       "type": "text",
+       "text": "📅 12 Januari 2027   📍 Aula Utama Kampus",
+       "x": 100,
+       "y": 1180,
+       "w": 1040,
+       "fontSize": 40,
+       "fontFamily": "Nunito",
+       "color": "#064E3B",
+       "fontWeight": "bold"
+      },
+      {
+       "type": "rect",
+       "x": 100,
+       "y": 1450,
+       "w": 1040,
+       "h": 140,
+       "fill": "#064E3B",
+       "radius": 24
+      },
+      {
+       "type": "text",
+       "text": "Daftar gratis: bit.ly/seminar-hijau",
+       "x": 100,
+       "y": 1497,
+       "w": 1040,
+       "fontSize": 44,
+       "fontFamily": "Nunito",
+       "color": "#ECFDF5",
+       "align": "center",
+       "fontWeight": "800"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "slug": "sertifikat",
+  "title": "Sertifikat Elegan",
+  "category": "Dokumen",
+  "width": 2000,
+  "height": 1414,
+  "spec": {
+   "title": "Sertifikat",
+   "palette": [
+    "#1F2937",
+    "#B45309",
+    "#FFFBEB"
+   ],
+   "fonts": {
+    "heading": "Playfair Display",
+    "body": "Lato"
+   },
+   "pages": [
+    {
+     "name": "Sertifikat",
+     "background": {
+      "type": "color",
+      "color": "#FFFBEB"
+     },
+     "elements": [
+      {
+       "type": "rect",
+       "x": 60,
+       "y": 60,
+       "w": 1880,
+       "h": 1294,
+       "fill": "#FFFBEB",
+       "stroke": "#B45309",
+       "strokeWidth": 8
+      },
+      {
+       "type": "rect",
+       "x": 90,
+       "y": 90,
+       "w": 1820,
+       "h": 1234,
+       "fill": "#FFFBEB",
+       "stroke": "#B45309",
+       "strokeWidth": 2
+      },
+      {
+       "type": "text",
+       "text": "SERTIFIKAT",
+       "x": 200,
+       "y": 220,
+       "w": 1600,
+       "fontSize": 120,
+       "fontFamily": "Playfair Display",
+       "color": "#1F2937",
+       "align": "center",
+       "fontWeight": "bold",
+       "letterSpacing": 200
+      },
+      {
+       "type": "text",
+       "text": "diberikan kepada",
+       "x": 200,
+       "y": 400,
+       "w": 1600,
+       "fontSize": 44,
+       "fontFamily": "Lato",
+       "color": "#6B7280",
+       "align": "center",
+       "italic": true
+      },
+      {
+       "type": "text",
+       "text": "Nama Peserta",
+       "x": 200,
+       "y": 480,
+       "w": 1600,
+       "fontSize": 130,
+       "fontFamily": "Dancing Script",
+       "color": "#B45309",
+       "align": "center"
+      },
+      {
+       "type": "line",
+       "x": 600,
+       "y": 660,
+       "w": 800,
+       "stroke": "#B45309",
+       "strokeWidth": 3
+      },
+      {
+       "type": "text",
+       "text": "Atas partisipasinya sebagai peserta dalam kegiatan Workshop Desain Digital 2026.",
+       "x": 300,
+       "y": 710,
+       "w": 1400,
+       "fontSize": 40,
+       "fontFamily": "Lato",
+       "color": "#374151",
+       "align": "center",
+       "lineHeight": 1.5
+      },
+      {
+       "type": "text",
+       "text": "Ketua Panitia",
+       "x": 1300,
+       "y": 1120,
+       "w": 500,
+       "fontSize": 36,
+       "fontFamily": "Lato",
+       "color": "#1F2937",
+       "align": "center",
+       "fontWeight": "bold"
+      },
+      {
+       "type": "line",
+       "x": 1350,
+       "y": 1100,
+       "w": 400,
+       "stroke": "#1F2937",
+       "strokeWidth": 2
+      }
+     ]
+    }
+   ]
+  }
+ },
+ {
+  "slug": "kartu-nama",
+  "title": "Kartu Nama",
+  "category": "Dokumen",
+  "width": 1050,
+  "height": 600,
+  "spec": {
+   "title": "Kartu Nama",
+   "palette": [
+    "#0EA5E9",
+    "#0F172A",
+    "#FFFFFF"
+   ],
+   "fonts": {
+    "heading": "Poppins",
+    "body": "Poppins"
+   },
+   "pages": [
+    {
+     "name": "Depan",
+     "background": {
+      "type": "color",
+      "color": "#0F172A"
+     },
+     "elements": [
+      {
+       "type": "rect",
+       "x": 700,
+       "y": 0,
+       "w": 350,
+       "h": 600,
+       "fill": "#0EA5E9"
+      },
+      {
+       "type": "triangle",
+       "x": 620,
+       "y": 0,
+       "w": 160,
+       "h": 600,
+       "fill": "#0EA5E9"
+      },
+      {
+       "type": "text",
+       "text": "Nama Lengkap",
+       "x": 70,
+       "y": 180,
+       "w": 600,
+       "fontSize": 64,
+       "fontFamily": "Poppins",
+       "color": "#FFFFFF",
+       "fontWeight": "bold"
+      },
+      {
+       "type": "text",
+       "text": "Desainer Grafis",
+       "x": 70,
+       "y": 265,
+       "w": 600,
+       "fontSize": 32,
+       "fontFamily": "Poppins",
+       "color": "#0EA5E9"
+      },
+      {
+       "type": "text",
+       "text": "0812 3456 7890\nnama@email.com\nwww.website.com",
+       "x": 70,
+       "y": 360,
+       "w": 560,
+       "fontSize": 26,
+       "fontFamily": "Poppins",
+       "color": "#CBD5E1",
+       "lineHeight": 1.6
+      }
+     ]
+    }
+   ]
+  }
+ }
+]

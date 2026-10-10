@@ -1,0 +1,26 @@
+{
+  "name": "racik-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "fabric": "6.9.1",
+    "jspdf": "4.2.1",
+    "jszip": "3.10.1",
+    "nuxt": "3.21.11",
+    "pptxgenjs": "4.0.1",
+    "vue": "3.5.43",
+    "vue-router": "4.6.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.1.5"
+  }
+}
