@@ -55,6 +55,7 @@ async function fillPlaceholder() {
     toast.error(e.message)
   } finally {
     busy.value = false
+    api.refreshUser() // saldo terpotong per gambar AI
   }
 }
 async function uploadInto(e: Event) {

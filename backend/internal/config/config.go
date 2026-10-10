@@ -44,6 +44,25 @@ type Config struct {
 	// openrouter (teks) / kenari, nvidia, agnes, openrouter, huggingface, pollinations (gambar).
 	AITextModel  string
 	AIImageModel string
+
+	// Akses admin: email di ADMIN_EMAILS otomatis ber-role admin (saat start, daftar, login).
+	// ADMIN_PASSWORD (opsional) membuat akun admin pertama kalau email pertama belum terdaftar.
+	AdminEmails   []string
+	AdminPassword string
+
+	// Tarif default, hanya dipakai untuk mengisi menu Konfigurasi Harga pertama kali.
+	// Setelah itu harga diatur admin dari UI (tersimpan di tabel app_settings / model_prices).
+	DefaultMarkupPercent float64 // harga user = harga vendor + markup %
+	DefaultFreeHitPrice  int64   // harga per hit (Rp) untuk model yang gratis di vendor
+
+	// System log (activity user + request ke vendor AI) ke Elasticsearch.
+	// LOG_ES_URL kosong = log ditulis ke stdout sebagai JSON per baris.
+	LogESURL         string
+	LogESUser        string
+	LogESPassword    string
+	LogESAPIKey      string
+	LogIndexPrefix   string // index: <prefix>-activity-YYYY.MM & <prefix>-vendor-YYYY.MM
+	LogRetentionDays int    // ILM: index dihapus setelah N hari (0 = simpan selamanya)
 }
 
 // Provider: konfigurasi satu provider AI selain kenari.
@@ -121,6 +140,18 @@ func Load() Config {
 	}
 	c.AITextModel = env("AI_TEXT_MODEL", "")
 	c.AIImageModel = env("AI_IMAGE_MODEL", "")
+
+	c.AdminEmails = list(strings.ToLower(env("ADMIN_EMAILS", "")))
+	c.AdminPassword = env("ADMIN_PASSWORD", "")
+	c.DefaultMarkupPercent = envFloat("PRICE_MARKUP_PERCENT", 5)
+	c.DefaultFreeHitPrice = int64(envInt("PRICE_FREE_HIT", 100))
+
+	c.LogESURL = strings.TrimRight(env("LOG_ES_URL", ""), "/")
+	c.LogESUser = env("LOG_ES_USER", "")
+	c.LogESPassword = env("LOG_ES_PASSWORD", "")
+	c.LogESAPIKey = env("LOG_ES_API_KEY", "")
+	c.LogIndexPrefix = env("LOG_INDEX_PREFIX", "racik")
+	c.LogRetentionDays = envInt("LOG_RETENTION_DAYS", 90)
 	return c
 }
 
@@ -144,6 +175,13 @@ func env(k, def string) string {
 
 func envInt(k string, def int) int {
 	if v, err := strconv.Atoi(os.Getenv(k)); err == nil {
+		return v
+	}
+	return def
+}
+
+func envFloat(k string, def float64) float64 {
+	if v, err := strconv.ParseFloat(os.Getenv(k), 64); err == nil {
 		return v
 	}
 	return def

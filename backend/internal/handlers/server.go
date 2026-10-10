@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/kikiraihan/racik/backend/internal/ai"
+	"github.com/kikiraihan/racik/backend/internal/applog"
 	"github.com/kikiraihan/racik/backend/internal/config"
 	"github.com/kikiraihan/racik/backend/internal/httpx"
 )
@@ -16,26 +17,36 @@ type Server struct {
 	DB  *sql.DB
 	Cfg config.Config
 	AI  *ai.Router
+	Log *applog.Logger // system log: activity user & request ke vendor AI (Elasticsearch)
 }
 
-func New(db *sql.DB, cfg config.Config) *Server {
+func New(db *sql.DB, cfg config.Config, logger *applog.Logger) *Server {
 	_ = os.MkdirAll(cfg.UploadDir, 0o755)
-	return &Server{DB: db, Cfg: cfg, AI: ai.FromConfig(cfg)}
+	s := &Server{DB: db, Cfg: cfg, AI: ai.FromConfig(cfg), Log: logger}
+	s.AI.Observe = s.logVendorCall
+	return s
+}
+
+func (s *Server) auth(h http.HandlerFunc) http.HandlerFunc {
+	return httpx.RequireAuth(s.Cfg.JWTSecret, h)
 }
 
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
-	auth := func(h http.HandlerFunc) http.HandlerFunc { return httpx.RequireAuth(s.Cfg.JWTSecret, h) }
+	auth := s.auth
+	admin := s.requireAdmin
+	// track: endpoint riskan yang dicatat di activity log.
+	track := s.track
 
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		httpx.JSON(w, 200, map[string]any{"ok": true, "ai": s.AI.Configured()})
 	})
 
 	// Auth
-	mux.HandleFunc("POST /api/auth/register", s.register)
-	mux.HandleFunc("POST /api/auth/login", s.login)
-	mux.HandleFunc("POST /api/auth/guest", s.guest)
-	mux.HandleFunc("POST /api/auth/upgrade", auth(s.upgradeGuest))
+	mux.HandleFunc("POST /api/auth/register", track("auth.register", s.register))
+	mux.HandleFunc("POST /api/auth/login", track("auth.login", s.login))
+	mux.HandleFunc("POST /api/auth/guest", track("auth.guest", s.guest))
+	mux.HandleFunc("POST /api/auth/upgrade", track("auth.upgrade", auth(s.upgradeGuest)))
 	mux.HandleFunc("GET /api/auth/me", auth(s.me))
 
 	// Designs
@@ -61,13 +72,28 @@ func (s *Server) Routes() http.Handler {
 
 	// AI connector (kenari.id + provider lain, lihat internal/ai/router.go)
 	mux.HandleFunc("GET /api/ai/models", s.aiModels)
-	mux.HandleFunc("POST /api/ai/design", auth(s.aiDesign))
-	mux.HandleFunc("POST /api/ai/refine", auth(s.aiRefine))
-	mux.HandleFunc("POST /api/ai/image", auth(s.aiImage))
-	mux.HandleFunc("POST /api/ai/image-edit", auth(s.aiImageEdit))
-	mux.HandleFunc("POST /api/ai/copy", auth(s.aiCopy))
+	// Fitur AI berbayar: saldo dipotong per hit (lihat billing.go).
+	mux.HandleFunc("POST /api/ai/design", track("ai.design", auth(s.aiDesign)))
+	mux.HandleFunc("POST /api/ai/refine", track("ai.refine", auth(s.aiRefine)))
+	mux.HandleFunc("POST /api/ai/image", track("ai.image", auth(s.aiImage)))
+	mux.HandleFunc("POST /api/ai/image-edit", track("ai.image_edit", auth(s.aiImageEdit)))
+	mux.HandleFunc("POST /api/ai/copy", track("ai.copy", auth(s.aiCopy)))
 	mux.HandleFunc("GET /api/ai/generations", auth(s.listGenerations))
 	mux.HandleFunc("POST /api/ai/generations/{id}/rate", auth(s.rateGeneration))
+
+	// Saldo user
+	mux.HandleFunc("GET /api/wallet", auth(s.wallet))
+
+	// Admin: user & saldo, konfigurasi AI, konfigurasi harga, system log
+	mux.HandleFunc("GET /api/admin/users", admin(s.adminListUsers))
+	mux.HandleFunc("PATCH /api/admin/users/{id}", track("admin.user_role", admin(s.adminUpdateUser)))
+	mux.HandleFunc("POST /api/admin/users/{id}/balance", track("admin.balance", admin(s.adminAdjustBalance)))
+	mux.HandleFunc("GET /api/admin/users/{id}/transactions", admin(s.adminUserTx))
+	mux.HandleFunc("GET /api/admin/ai-config", admin(s.adminGetAIConfig))
+	mux.HandleFunc("PUT /api/admin/ai-config", track("admin.ai_config", admin(s.adminPutAIConfig)))
+	mux.HandleFunc("GET /api/admin/pricing", admin(s.adminGetPricing))
+	mux.HandleFunc("PUT /api/admin/pricing", track("admin.pricing", admin(s.adminPutPricing)))
+	mux.HandleFunc("GET /api/admin/logs", admin(s.adminLogs))
 
 	// File statis hasil upload / AI
 	files := http.StripPrefix("/uploads/", http.FileServer(http.Dir(filepath.Clean(s.Cfg.UploadDir))))

@@ -8,28 +8,24 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/kikiraihan/racik/backend/internal/ai"
+	"github.com/kikiraihan/racik/backend/internal/billing"
 	"github.com/kikiraihan/racik/backend/internal/httpx"
 )
 
 const maxImagesPerDesign = 4
 
+// GET /api/ai/models — info AI untuk user. Provider & model sengaja tidak dikirim: user tidak
+// perlu tahu dalamannya; model diatur admin (lihat /api/admin/ai-config). Yang dikirim hanya
+// status layanan dan tarif per fitur.
 func (s *Server) aiModels(w http.ResponseWriter, r *http.Request) {
-	// Id model berformat "<provider>:<model>"; "labels" berisi teks tampilannya.
 	httpx.JSON(w, 200, map[string]any{
 		"configured":         s.AI.Configured(),
-		"provider":           "kenari.id",
-		"textModel":          s.AI.DefaultText(),
-		"textModels":         nonNil(s.AI.TextChoices()),
-		"imageModel":         s.AI.DefaultImage(),
-		"imageModels":        nonNil(s.AI.ImageChoices()),
-		"editModels":         nonNil(s.AI.EditChoices()),
-		"labels":             s.AI.Labels(),
+		"prices":             s.featurePrices(r.Context()),
 		"fonts":              ai.Fonts,
 		"maxImagesPerDesign": maxImagesPerDesign,
 	})
@@ -42,38 +38,18 @@ func nonNil(v []string) []string {
 	return v
 }
 
-func (s *Server) aiError(w http.ResponseWriter, err error) {
+// aiError menjawab error vendor AI dengan pesan umum: detail (provider, model, pesan asli
+// vendor) hanya masuk log vendor & log server, tidak dikirim ke user. Kode request dipakai
+// admin untuk mencari detailnya di system log.
+func (s *Server) aiError(w http.ResponseWriter, r *http.Request, err error) {
+	reqID := httpx.RequestID(r.Context())
+	log.Printf("ai error [%s]: %v", reqID, err)
+	activity(r, "ai_error", truncate(err.Error(), 500))
 	if errors.Is(err, ai.ErrNotConfigured) {
-		httpx.Error(w, 503, err.Error())
+		httpx.Error(w, 503, "Layanan AI belum tersedia. Hubungi admin. (kode: "+reqID+")")
 		return
 	}
-	log.Printf("ai error: %v", err)
-	httpx.Error(w, 502, "AI gagal: "+err.Error())
-}
-
-func (s *Server) pickTextModel(m string) string {
-	if m != "" && slices.Contains(s.AI.TextChoices(), m) {
-		return m
-	}
-	return s.AI.DefaultText()
-}
-
-func (s *Server) pickImageModel(m string) string {
-	if m != "" && slices.Contains(s.AI.ImageChoices(), m) {
-		return m
-	}
-	return s.AI.DefaultImage()
-}
-
-// pickEditModel: model gambar pilihan kalau providernya bisa edit gambar (kenari,
-// OpenRouter); kalau tidak, model edit pertama yang tersedia.
-func (s *Server) pickEditModel(m string) string {
-	m = s.pickImageModel(m)
-	edits := s.AI.EditChoices()
-	if slices.Contains(edits, m) || len(edits) == 0 {
-		return m
-	}
-	return edits[0]
+	httpx.Error(w, 502, "Layanan AI sedang gangguan, coba lagi beberapa saat. Saldo kamu tidak terpotong. (kode: "+reqID+")")
 }
 
 // loadExamples mengambil desain AI yang pernah diberi rating oleh user (personalisasi).
@@ -125,18 +101,31 @@ func (s *Server) aiDesign(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Pages = min(max(req.Pages, 1), 15)
 	user := httpx.CurrentUser(r)
-	model := s.pickTextModel(req.TextModel)
+	models := s.activeModels(r.Context())
+	model := models.TextModel
+	prices, _ := s.pricing(r.Context())
+	activity(r, "prompt", truncate(req.Prompt, 300))
+
+	// Biaya: 1x susun layout (model teks) + per gambar AI yang berhasil dibuat.
+	bill := s.newCharge(r, "design")
+	textPrice := prices.UserPrice(model)
+	if err := bill.reserve(r.Context(), textPrice, "Magic Design — susun layout & copy"); err != nil {
+		s.chargeError(w, r, err, textPrice)
+		return
+	}
+	defer bill.settle(r.Context(), r)
 
 	msgs := ai.BuildDesignMessages(req, s.brandContext(r.Context(), user.ID), s.loadExamples(r.Context(), user.ID), maxImagesPerDesign)
 	spec, err := s.chatJSON(r.Context(), model, msgs, 8000)
 	if err != nil {
-		s.aiError(w, err)
+		s.aiError(w, r, err)
 		return
 	}
+	bill.use(textPrice)
 	spec["width"], spec["height"] = req.Width, req.Height
 	warnings := []string{}
 	if req.GenerateImages {
-		warnings = s.fillImages(r.Context(), user.ID, s.pickImageModel(req.ImageModel), spec, req.Width, req.Height)
+		warnings = s.fillImages(r.Context(), user.ID, models.ImageModel, spec, req.Width, req.Height, bill, prices.UserPrice(models.ImageModel), "Magic Design")
 	}
 	id := s.logGeneration(r.Context(), user.ID, "design", req.Prompt, model, spec)
 	httpx.JSON(w, 200, map[string]any{"generationId": id, "spec": spec, "warnings": warnings})
@@ -162,16 +151,29 @@ func (s *Server) aiRefine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := httpx.CurrentUser(r)
-	model := s.pickTextModel(req.TextModel)
-	spec, err := s.chatJSON(r.Context(), model, ai.BuildRefineMessages(req.Spec, req.Instruction, req.Width, req.Height, req.GenerateImages), 8000)
-	if err != nil {
-		s.aiError(w, err)
+	models := s.activeModels(r.Context())
+	model := models.TextModel
+	prices, _ := s.pricing(r.Context())
+	activity(r, "prompt", truncate(req.Instruction, 300))
+
+	bill := s.newCharge(r, "refine")
+	textPrice := prices.UserPrice(model)
+	if err := bill.reserve(r.Context(), textPrice, "Perbaiki desain — susun ulang layout"); err != nil {
+		s.chargeError(w, r, err, textPrice)
 		return
 	}
+	defer bill.settle(r.Context(), r)
+
+	spec, err := s.chatJSON(r.Context(), model, ai.BuildRefineMessages(req.Spec, req.Instruction, req.Width, req.Height, req.GenerateImages), 8000)
+	if err != nil {
+		s.aiError(w, r, err)
+		return
+	}
+	bill.use(textPrice)
 	spec["width"], spec["height"] = req.Width, req.Height
 	warnings := []string{}
 	if req.GenerateImages {
-		warnings = s.fillImages(r.Context(), user.ID, s.pickImageModel(req.ImageModel), spec, req.Width, req.Height)
+		warnings = s.fillImages(r.Context(), user.ID, models.ImageModel, spec, req.Width, req.Height, bill, prices.UserPrice(models.ImageModel), "Perbaiki desain")
 	}
 	id := s.logGeneration(r.Context(), user.ID, "refine", req.Instruction, model, spec)
 	httpx.JSON(w, 200, map[string]any{"generationId": id, "spec": spec, "warnings": warnings})
@@ -202,7 +204,8 @@ func (s *Server) chatJSON(ctx context.Context, model string, msgs []ai.Message, 
 }
 
 // fillImages men-generate semua imagePrompt di spec secara paralel lalu mengisi field "src".
-func (s *Server) fillImages(ctx context.Context, userID, model string, spec map[string]any, pw, ph int) []string {
+// Saldo dipesan untuk sebanyak mungkin gambar; gambar yang gagal dikembalikan saldonya.
+func (s *Server) fillImages(ctx context.Context, userID, model string, spec map[string]any, pw, ph int, bill *charge, unit int64, label string) []string {
 	type job struct {
 		target map[string]any
 		prompt string
@@ -234,11 +237,18 @@ func (s *Server) fillImages(ctx context.Context, userID, model string, spec map[
 	if len(jobs) > maxImagesPerDesign {
 		jobs = jobs[:maxImagesPerDesign]
 	}
+	var warnings []string
+	if len(jobs) > 0 {
+		k := bill.reserveUpTo(ctx, len(jobs), unit, func(k int) string { return fmt.Sprintf("%s — %d gambar AI", label, k) })
+		if k < len(jobs) {
+			warnings = append(warnings, fmt.Sprintf("Saldo tidak cukup untuk %d gambar AI (%s/gambar), placeholder dibiarkan kosong. Silakan top up saldo.", len(jobs)-k, rupiah(unit)))
+			jobs = jobs[:k]
+		}
+	}
 	var (
-		wg       sync.WaitGroup
-		mu       sync.Mutex
-		warnings []string
-		sem      = make(chan struct{}, 3)
+		wg  sync.WaitGroup
+		mu  sync.Mutex
+		sem = make(chan struct{}, 3)
 	)
 	for _, j := range jobs {
 		wg.Add(1)
@@ -255,9 +265,12 @@ func (s *Server) fillImages(ctx context.Context, userID, model string, spec map[
 			mu.Lock()
 			defer mu.Unlock()
 			if err != nil {
-				warnings = append(warnings, fmt.Sprintf("gambar %q gagal: %v", truncate(j.prompt, 40), err))
+				// Detail error vendor ada di log vendor; ke user cukup pesan umum.
+				log.Printf("gambar ai [%s]: %v", httpx.RequestID(ctx), err)
+				warnings = append(warnings, fmt.Sprintf("Gambar %q gagal dibuat, saldonya dikembalikan.", truncate(j.prompt, 40)))
 				return
 			}
+			bill.use(unit)
 			j.target["src"] = a.URL
 		}(j)
 	}
@@ -279,14 +292,23 @@ func (s *Server) aiImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := httpx.CurrentUser(r)
-	model := s.pickImageModel(req.Model)
+	model := s.activeModels(r.Context()).ImageModel
 	prompt := req.Prompt
 	if req.Style != "" {
 		prompt += ". Style: " + req.Style
 	}
+	activity(r, "prompt", truncate(prompt, 300))
+	prices, _ := s.pricing(r.Context())
+	bill := s.newCharge(r, "image")
+	price := prices.UserPrice(model)
+	if err := bill.reserve(r.Context(), price, "Gambar AI"); err != nil {
+		s.chargeError(w, r, err, price)
+		return
+	}
+	defer bill.settle(r.Context(), r)
 	img, err := s.AI.GenerateImage(r.Context(), model, prompt, req.Width, req.Height)
 	if err != nil {
-		s.aiError(w, err)
+		s.aiError(w, r, err)
 		return
 	}
 	a, err := s.saveAsset(r.Context(), user.ID, img.Data, img.Mime, "ai-image.png", "ai")
@@ -294,6 +316,7 @@ func (s *Server) aiImage(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 500, err.Error())
 		return
 	}
+	bill.use(price)
 	id := s.logGeneration(r.Context(), user.ID, "image", req.Prompt, model, map[string]any{"url": a.URL})
 	httpx.JSON(w, 200, map[string]any{"generationId": id, "asset": a})
 }
@@ -332,10 +355,19 @@ func (s *Server) aiImageEdit(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 400, "url atau dataUrl wajib diisi")
 		return
 	}
-	model := s.pickEditModel(req.Model)
+	model := s.activeModels(r.Context()).EditModel
+	activity(r, "prompt", truncate(req.Prompt, 300))
+	prices, _ := s.pricing(r.Context())
+	bill := s.newCharge(r, "edit")
+	price := prices.UserPrice(model)
+	if err := bill.reserve(r.Context(), price, "Edit gambar AI"); err != nil {
+		s.chargeError(w, r, err, price)
+		return
+	}
+	defer bill.settle(r.Context(), r)
 	img, err := s.AI.EditImage(r.Context(), model, req.Prompt, &src)
 	if err != nil {
-		s.aiError(w, err)
+		s.aiError(w, r, err)
 		return
 	}
 	a, err := s.saveAsset(r.Context(), user.ID, img.Data, img.Mime, "ai-edit.png", "ai")
@@ -343,6 +375,7 @@ func (s *Server) aiImageEdit(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 500, err.Error())
 		return
 	}
+	bill.use(price)
 	id := s.logGeneration(r.Context(), user.ID, "edit", req.Prompt, model, map[string]any{"url": a.URL})
 	httpx.JSON(w, 200, map[string]any{"generationId": id, "asset": a})
 }
@@ -359,13 +392,23 @@ func (s *Server) aiCopy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := httpx.CurrentUser(r)
-	model := s.pickTextModel(req.Model)
+	model := s.activeModels(r.Context()).TextModel
+	activity(r, "prompt", truncate(req.Prompt, 300))
+	prices, _ := s.pricing(r.Context())
+	bill := s.newCharge(r, "copy")
+	price := prices.UserPrice(model)
+	if err := bill.reserve(r.Context(), price, "Copywriting AI"); err != nil {
+		s.chargeError(w, r, err, price)
+		return
+	}
+	defer bill.settle(r.Context(), r)
 	bk := s.loadBrandKit(r.Context(), user.ID)
 	text, err := s.AI.Chat(r.Context(), model, ai.BuildCopyMessages(req.Prompt, req.Kind, bk.Voice), 1200)
 	if err != nil {
-		s.aiError(w, err)
+		s.aiError(w, r, err)
 		return
 	}
+	bill.use(price)
 	var options []string
 	if raw, err := ai.ExtractJSON(text); err == nil {
 		json.Unmarshal(raw, &options)
@@ -393,7 +436,7 @@ func (s *Server) listGenerations(w http.ResponseWriter, r *http.Request) {
 		ID        string    `json:"id"`
 		Kind      string    `json:"kind"`
 		Prompt    string    `json:"prompt"`
-		Model     string    `json:"model"`
+		Model     string    `json:"-"` // model internal tidak dikirim ke user
 		Rating    *int      `json:"rating"`
 		Feedback  string    `json:"feedback"`
 		CreatedAt time.Time `json:"createdAt"`
@@ -425,6 +468,16 @@ func (s *Server) rateGeneration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, 200, map[string]bool{"ok": true})
+}
+
+// chargeError: gagal memotong saldo sebelum memanggil AI.
+func (s *Server) chargeError(w http.ResponseWriter, r *http.Request, err error, need int64) {
+	if errors.Is(err, billing.ErrInsufficient) {
+		s.insufficient(w, r, need)
+		return
+	}
+	log.Printf("potong saldo: %v", err)
+	httpx.Error(w, 500, "gagal memproses saldo")
 }
 
 func num(v any, def int) int {

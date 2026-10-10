@@ -4,6 +4,8 @@ export interface User {
   email: string
   name: string
   isGuest: boolean
+  role: 'user' | 'admin'
+  balance: number // saldo dalam Rupiah, dipotong setiap memakai fitur AI
 }
 
 const TOKEN_KEY = 'racik_token'
@@ -52,7 +54,8 @@ export function useApi() {
     } catch (e: any) {
       const msg = e?.data?.error || e?.message || 'Permintaan gagal'
       if (e?.status === 401 && session.token.value) session.logout()
-      throw Object.assign(new Error(msg), { status: e?.status })
+      // code "insufficient_balance" (402) dipakai UI untuk mengarahkan ke halaman saldo.
+      throw Object.assign(new Error(msg), { status: e?.status, code: e?.data?.code })
     }
   }
 
@@ -73,9 +76,18 @@ export function useApi() {
     return res.user
   }
 
+  /** Muat ulang data user (saldo) setelah memakai fitur AI. */
+  async function refreshUser() {
+    if (!session.token.value) return
+    try {
+      session.user.value = await request<User>('/api/auth/me')
+    } catch {}
+  }
+
   return {
     request,
     ensureSession,
+    refreshUser,
     get: <T>(p: string, query?: any) => request<T>(p, { query }),
     post: <T>(p: string, body?: any) => request<T>(p, { method: 'POST', body }),
     put: <T>(p: string, body?: any) => request<T>(p, { method: 'PUT', body }),
@@ -119,14 +131,31 @@ export interface Template {
   spec: any
 }
 
+// Tarif fitur AI per hit (Rupiah). Model/provider tidak pernah dikirim ke user — diatur admin.
+export interface AIPrices {
+  text: number // Magic Design / Perbaiki desain / Copywriting (1x susun layout/teks)
+  image: number // per gambar AI yang berhasil dibuat
+  edit: number // per gambar yang diedit AI
+}
+
 export interface AIModels {
   configured: boolean
-  provider: string
-  textModel: string
-  textModels: string[]
-  imageModel: string
-  imageModels: string[]
-  editModels?: string[] // model gambar yang providernya bisa edit gambar
-  labels?: Record<string, string> // id "<provider>:<model>" → teks tampilan
+  prices: AIPrices
   fonts: string[]
+  maxImagesPerDesign: number
+}
+
+export interface WalletTx {
+  id: string
+  amount: number
+  balanceAfter: number
+  kind: 'topup' | 'charge' | 'refund' | 'adjust'
+  feature: string
+  description: string
+  createdAt: string
+}
+
+/** Format Rupiah: 12500 → "Rp 12.500" */
+export function rupiah(n: number) {
+  return (n < 0 ? '-' : '') + 'Rp ' + Math.abs(Math.round(n)).toLocaleString('id-ID')
 }

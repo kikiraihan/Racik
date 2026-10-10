@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // Ikon garis sederhana (gaya lucide), digambar inline agar tanpa dependency tambahan.
-import { ICON_PATHS as P } from '~/lib/icons'
+import { GRAPHIC_ICONS as G, ICON_PATHS as P } from '~/lib/icons'
 
 const props = withDefaults(defineProps<{ name: string; size?: number; stroke?: number }>(), { size: 18, stroke: 2 })
 
-const d = computed(() => P[props.name] || P.sparkles)
+// Ikon UI dulu, lalu ikon elemen grafis (mis. users, clock), terakhir sparkles.
+const d = computed(() => P[props.name] || G[props.name] || P.sparkles)
 </script>
 
 <template>
