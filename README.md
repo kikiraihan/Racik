@@ -75,7 +75,7 @@ frontend/
 ### Alur AI
 1. Frontend kirim brief → `POST /api/ai/design`
 2. Backend menyusun prompt (skema JSON "design spec" + brand kit + contoh desain yang disukai user) → Claude via `POST {KENARI_BASE_URL}/chat/completions`
-3. Elemen `image` / latar `image` yang punya `imagePrompt` di-generate paralel via `POST /images/generations` (fallback otomatis ke chat completions multimodal untuk model seperti Nano Banana), disimpan sebagai asset
+3. Elemen `image` / latar `image` yang punya `imagePrompt` di-generate paralel via `POST /images/generations` (fallback otomatis ke chat completions multimodal bila model ditolak endpoint gambar), disimpan sebagai asset
 4. Frontend merender spec menjadi objek fabric yang bisa diedit penuh
 
 ---
@@ -126,10 +126,26 @@ Ubah target proxy dengan `NUXT_API_TARGET=http://host:port` (dipakai saat `dev` 
 |---|---|---|
 | `KENARI_BASE_URL` | `https://kenari.id/v1` | Base URL OpenAI-compatible |
 | `KENARI_API_KEY` | – | API key kenari.id (wajib untuk AI) |
-| `KENARI_TEXT_MODEL(S)` | `claude-sonnet-4-5` | Model untuk layout & copy (Claude) |
-| `KENARI_IMAGE_MODEL(S)` | `gemini-2.5-flash-image`, `gpt-image-1` | Nano Banana / GPT Image |
+| `KENARI_TEXT_MODEL(S)` | `claude-haiku-5-5` | Model untuk layout & copy (Claude) |
+| `KENARI_IMAGE_MODEL(S)` | `gpt-image-2`, `nano-banana-2` | GPT Image / Nano Banana |
+| `AI_TIMEOUT_SEC` | `300` | Timeout per request AI (docs kenari menyarankan ≥ 5 menit untuk gambar) |
 
-Sesuaikan nama model dengan yang tersedia di akun kenari.id kamu.
+Sesuaikan nama model dengan yang tersedia di akun kenari.id kamu — id harus **persis** seperti di
+`GET https://kenari.id/v1/models` (publik, tanpa key). Saat start, backend mencocokkan
+`KENARI_*_MODEL(S)` dengan daftar itu dan menulis `PERINGATAN kenari: ...` di log bila ada yang
+tidak dikenal. Model default selalu ikut masuk ke daftar pilihan walau tidak ditulis di `..._MODELS`.
+
+Perilaku kenari yang ditangani konektor (`backend/internal/ai/kenari.go`):
+
+- Error `{"error":{"message","code"}}` diteruskan lengkap dengan `code` (mis. `insufficient_balance`)
+  dan `Retry-After` untuk 429.
+- Request > 45 dtk dijawab `200` + spasi lalu JSON; kegagalan di titik itu (`200` + `error`)
+  dikenali sebagai error dan **tidak** diulang.
+- `url` di jawaban gambar berupa `data:` URI → di-decode langsung.
+- Fallback gambar lewat chat completions hanya dicoba bila model ditolak (400/404/410/422) —
+  tidak untuk saldo habis (402), kuota (429), atau timeout, supaya tidak tertagih dua kali.
+- Blok `<think>…</think>` dari model reasoning dibuang sebelum JSON dibaca; jawaban kosong karena
+  token habis untuk reasoning menghasilkan pesan error yang jelas.
 
 ---
 

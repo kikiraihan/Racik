@@ -40,13 +40,27 @@ func Load() Config {
 		MaxUploadMB:   int64(envInt("MAX_UPLOAD_MB", 20)),
 		KenariBaseURL: strings.TrimRight(env("KENARI_BASE_URL", "https://kenari.id/v1"), "/"),
 		KenariAPIKey:  env("KENARI_API_KEY", ""),
-		AITimeoutSec:  envInt("AI_TIMEOUT_SEC", 180),
+		// Docs kenari menyarankan timeout >= 5 menit untuk generate gambar.
+		AITimeoutSec: envInt("AI_TIMEOUT_SEC", 300),
 	}
-	c.KenariTextModel = env("KENARI_TEXT_MODEL", "claude-sonnet-4-5")
-	c.KenariTextModels = list(env("KENARI_TEXT_MODELS", c.KenariTextModel))
-	c.KenariImageModel = env("KENARI_IMAGE_MODEL", "gemini-2.5-flash-image")
-	c.KenariImageModels = list(env("KENARI_IMAGE_MODELS", c.KenariImageModel+",gpt-image-1"))
+	// Id model harus persis sama dengan daftar GET https://kenari.id/v1/models
+	// (publik). Default di bawah diambil dari katalog yang dipakai katilidev (Okt 2026).
+	c.KenariTextModel = env("KENARI_TEXT_MODEL", "claude-haiku-5-5")
+	c.KenariTextModels = withDefault(c.KenariTextModel, list(env("KENARI_TEXT_MODELS", c.KenariTextModel)))
+	c.KenariImageModel = env("KENARI_IMAGE_MODEL", "gpt-image-2")
+	c.KenariImageModels = withDefault(c.KenariImageModel, list(env("KENARI_IMAGE_MODELS", c.KenariImageModel+",nano-banana-2")))
 	return c
+}
+
+// withDefault memastikan model default selalu ada (paling depan) di daftar pilihan,
+// supaya dropdown di UI tidak kehilangan model yang sebenarnya dipakai.
+func withDefault(def string, models []string) []string {
+	for _, m := range models {
+		if m == def {
+			return models
+		}
+	}
+	return append([]string{def}, models...)
 }
 
 func env(k, def string) string {
