@@ -2,3 +2,6 @@
 backend/uploads/
 *.log
 .DS_Store
+# Deploy (lihat DEPLOY.md / CICD.md)
+backups/
+.deploy-previous

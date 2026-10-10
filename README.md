@@ -98,8 +98,12 @@ frontend/
 ```bash
 cp .env.example .env          # isi KENARI_API_KEY
 docker compose up --build
-# buka http://localhost:3000
+# buka http://localhost:8091  (port = APP_PORT di .env)
 ```
+
+Hanya frontend yang dipublish ke host (`127.0.0.1:${APP_PORT}`); backend, Postgres dan
+Elasticsearch cuma bisa dijangkau lewat network internal docker. Port db/ES di host acak —
+isi `DB_HOST_PORT=5432` di `.env` kalau ingin backend `go run` (opsi B) memakai db dari compose.
 
 Demo tanpa API key (AI tiruan):
 ```bash
@@ -185,6 +189,18 @@ dan OpenRouter dicocokkan dengan `GET /models` masing-masing; yang tidak dikenal
 
 ---
 
+## Deploy & CI/CD
+
+Production berjalan di VPS yang sama dengan katilidev & our-life-planner (nginx host +
+Cloudflare di depan, container hanya di `127.0.0.1`).
+
+- **[DEPLOY.md](DEPLOY.md)** — setup server pertama kali: port, `.env`, nginx host, certbot, Cloudflare, backup.
+- **[CICD.md](CICD.md)** — auto deploy tiap `git push origin main` (GitHub Actions → SSH → `scripts/deploy.sh`,
+  backup DB, health check, auto-rollback).
+- `make help` — daftar perintah (`make deploy`, `make rollback`, `make backup`, `make ci`, …).
+
+---
+
 ## System log (Elasticsearch)
 
 Dua jenis log dikirim asinkron (batch lewat Bulk API, tidak memperlambat request) ke Elasticsearch:
@@ -197,7 +213,7 @@ Dua jenis log dikirim asinkron (batch lewat Bulk API, tidak memperlambat request
 - `request_id` sama dengan header `X-Request-ID`, kode yang tampil di pesan error user, dan kolom `request_id` di `wallet_transactions` — jadi satu keluhan user bisa ditelusuri sampai ke request vendor-nya.
 - Saat start backend membuat index template (mapping) dan ILM policy retensi `LOG_RETENTION_DAYS` (default 90 hari).
 - `LOG_ES_URL` kosong atau ES mati → log ditulis ke stdout (`[log:activity] {...}`), server tetap jalan.
-- Docker Compose sudah menyertakan Elasticsearch single-node (heap 512 MB). Kibana opsional: `docker compose --profile kibana up`.
+- Docker Compose sudah menyertakan Elasticsearch single-node (heap 512 MB). Kibana opsional: `docker compose --profile kibana up` (port host acak di 127.0.0.1, lihat `docker compose port kibana 5601`).
 
 Kenapa Elasticsearch: cocok untuk log terstruktur yang perlu dicari & difilter (per user, aksi, error), ada Kibana untuk dashboard, dan retensi via ILM. Kalau RAM server terbatas (ES butuh ±1 GB), alternatif yang lebih ringan adalah **VictoriaLogs** (single binary, RAM puluhan MB, menerima Bulk API Elasticsearch sehingga pengiriman log tetap jalan dengan `LOG_ES_URL=http://victorialogs:9428/insert/elasticsearch`) — tetapi pencarian di Panel admin memakai Search API Elasticsearch, jadi untuk VictoriaLogs pencarian dilakukan lewat UI VictoriaLogs/Grafana.
 
