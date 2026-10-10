@@ -24,6 +24,35 @@ type Config struct {
 	KenariImageModel  string   // model gambar default (Nano Banana / GPT Image)
 	KenariImageModels []string // daftar model gambar yang boleh dipilih user
 	AITimeoutSec      int
+
+	// Provider AI lain (sama dengan katilidev). Provider aktif kalau API key-nya diisi
+	// (Pollinations: POLLINATIONS_ENABLED=true); modelnya masuk ke pilihan di UI sebagai
+	// "<provider>:<model>".
+	Anthropic    Provider // teks (Claude API langsung)
+	Groq         Provider // teks
+	Nvidia       Provider // teks + gambar (NVIDIA NIM)
+	Agnes        Provider // teks + gambar
+	OpenRouter   Provider // teks + gambar (gambar lewat chat completions)
+	HuggingFace  Provider // gambar
+	Pollinations Provider // gambar, gratis tanpa key
+
+	AnthropicEffort  string // effort Claude: low | medium | high | xhigh | max
+	NvidiaImageSteps int    // langkah FLUX.2 di NVIDIA
+
+	// Model default lintas provider, format "<provider>:<model>" (mis. "kenari:claude-sonnet-5-5").
+	// Kosong = model pertama provider aktif, urutan: kenari, anthropic, groq, nvidia, agnes,
+	// openrouter (teks) / kenari, nvidia, agnes, openrouter, huggingface, pollinations (gambar).
+	AITextModel  string
+	AIImageModel string
+}
+
+// Provider: konfigurasi satu provider AI selain kenari.
+type Provider struct {
+	APIKey      string
+	BaseURL     string
+	Enabled     bool // hanya untuk provider tanpa key (Pollinations)
+	TextModels  []string
+	ImageModels []string
 }
 
 func Load() Config {
@@ -40,13 +69,70 @@ func Load() Config {
 		MaxUploadMB:   int64(envInt("MAX_UPLOAD_MB", 20)),
 		KenariBaseURL: strings.TrimRight(env("KENARI_BASE_URL", "https://kenari.id/v1"), "/"),
 		KenariAPIKey:  env("KENARI_API_KEY", ""),
-		AITimeoutSec:  envInt("AI_TIMEOUT_SEC", 180),
+		// Docs kenari menyarankan timeout >= 5 menit untuk generate gambar.
+		AITimeoutSec: envInt("AI_TIMEOUT_SEC", 300),
 	}
-	c.KenariTextModel = env("KENARI_TEXT_MODEL", "claude-sonnet-4-5")
-	c.KenariTextModels = list(env("KENARI_TEXT_MODELS", c.KenariTextModel))
-	c.KenariImageModel = env("KENARI_IMAGE_MODEL", "gemini-2.5-flash-image")
-	c.KenariImageModels = list(env("KENARI_IMAGE_MODELS", c.KenariImageModel+",gpt-image-1"))
+	// Id model harus persis sama dengan daftar GET https://kenari.id/v1/models
+	// (publik). Default di bawah diambil dari katalog yang dipakai katilidev (Okt 2026),
+	// kecuali claude-sonnet-5-5: id-nya ditebak dari pola kenari (claude-haiku-5-5),
+	// belum dicek ke /models — kalau salah, log start menulis PERINGATAN.
+	c.KenariTextModel = env("KENARI_TEXT_MODEL", "claude-sonnet-5-5")
+	c.KenariTextModels = withDefault(c.KenariTextModel, list(env("KENARI_TEXT_MODELS", c.KenariTextModel)))
+	c.KenariImageModel = env("KENARI_IMAGE_MODEL", "gpt-image-2")
+	c.KenariImageModels = withDefault(c.KenariImageModel, list(env("KENARI_IMAGE_MODELS", c.KenariImageModel+",nano-banana-2")))
+
+	// Default model provider lain mengikuti katilidev (config/services.php + app/Ai/AiModels.php).
+	c.Anthropic = Provider{
+		APIKey:     env("ANTHROPIC_API_KEY", ""),
+		BaseURL:    env("ANTHROPIC_BASE_URL", ""),
+		TextModels: list(env("ANTHROPIC_TEXT_MODELS", "claude-sonnet-5-5,claude-opus-5-5,claude-haiku-5-5")),
+	}
+	c.AnthropicEffort = env("ANTHROPIC_EFFORT", "medium")
+	c.Groq = Provider{
+		APIKey:     env("GROQ_API_KEY", ""),
+		TextModels: list(env("GROQ_TEXT_MODELS", "openai/gpt-oss-120b,openai/gpt-oss-20b")),
+	}
+	c.Nvidia = Provider{
+		APIKey:      env("NVIDIA_API_KEY", ""),
+		TextModels:  list(env("NVIDIA_TEXT_MODELS", "meta/llama-3.3-70b-instruct,deepseek-ai/deepseek-v4-flash,qwen/qwen3-next-80b-a3b-instruct")),
+		ImageModels: list(env("NVIDIA_IMAGE_MODELS", "black-forest-labs/flux.2-klein-4b,black-forest-labs/flux.1-dev")),
+	}
+	c.NvidiaImageSteps = envInt("NVIDIA_IMAGE_STEPS", 4)
+	c.Agnes = Provider{
+		APIKey:      env("AGNES_API_KEY", ""),
+		BaseURL:     strings.TrimRight(env("AGNES_BASE_URL", "https://apihub.agnes-ai.com/v1"), "/"),
+		TextModels:  list(env("AGNES_TEXT_MODELS", "agnes-3.0-flash,agnes-2.5-flash")),
+		ImageModels: list(env("AGNES_IMAGE_MODELS", "agnes-image-2.5-flash,agnes-image-2.1-flash")),
+	}
+	c.OpenRouter = Provider{
+		APIKey:      env("OPENROUTER_API_KEY", ""),
+		BaseURL:     strings.TrimRight(env("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"), "/"),
+		TextModels:  list(env("OPENROUTER_TEXT_MODELS", "")),
+		ImageModels: list(env("OPENROUTER_IMAGE_MODELS", "black-forest-labs/flux.2-flex")),
+	}
+	c.HuggingFace = Provider{
+		APIKey:      env("HUGGINGFACE_API_KEY", ""),
+		BaseURL:     strings.TrimRight(env("HUGGINGFACE_BASE_URL", "https://router.huggingface.co/hf-inference/models"), "/"),
+		ImageModels: list(env("HUGGINGFACE_IMAGE_MODELS", "black-forest-labs/FLUX.1-schnell")),
+	}
+	c.Pollinations = Provider{
+		Enabled:     env("POLLINATIONS_ENABLED", "false") == "true",
+		ImageModels: list(env("POLLINATIONS_IMAGE_MODELS", "flux")),
+	}
+	c.AITextModel = env("AI_TEXT_MODEL", "")
+	c.AIImageModel = env("AI_IMAGE_MODEL", "")
 	return c
+}
+
+// withDefault memastikan model default selalu ada (paling depan) di daftar pilihan,
+// supaya dropdown di UI tidak kehilangan model yang sebenarnya dipakai.
+func withDefault(def string, models []string) []string {
+	for _, m := range models {
+		if m == def {
+			return models
+		}
+	}
+	return append([]string{def}, models...)
 }
 
 func env(k, def string) string {

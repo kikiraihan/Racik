@@ -20,16 +20,26 @@ import (
 const maxImagesPerDesign = 4
 
 func (s *Server) aiModels(w http.ResponseWriter, r *http.Request) {
+	// Id model berformat "<provider>:<model>"; "labels" berisi teks tampilannya.
 	httpx.JSON(w, 200, map[string]any{
 		"configured":         s.AI.Configured(),
 		"provider":           "kenari.id",
-		"textModel":          s.Cfg.KenariTextModel,
-		"textModels":         s.Cfg.KenariTextModels,
-		"imageModel":         s.Cfg.KenariImageModel,
-		"imageModels":        s.Cfg.KenariImageModels,
+		"textModel":          s.AI.DefaultText(),
+		"textModels":         nonNil(s.AI.TextChoices()),
+		"imageModel":         s.AI.DefaultImage(),
+		"imageModels":        nonNil(s.AI.ImageChoices()),
+		"editModels":         nonNil(s.AI.EditChoices()),
+		"labels":             s.AI.Labels(),
 		"fonts":              ai.Fonts,
 		"maxImagesPerDesign": maxImagesPerDesign,
 	})
+}
+
+func nonNil(v []string) []string {
+	if v == nil {
+		return []string{}
+	}
+	return v
 }
 
 func (s *Server) aiError(w http.ResponseWriter, err error) {
@@ -42,17 +52,28 @@ func (s *Server) aiError(w http.ResponseWriter, err error) {
 }
 
 func (s *Server) pickTextModel(m string) string {
-	if m != "" && slices.Contains(s.Cfg.KenariTextModels, m) {
+	if m != "" && slices.Contains(s.AI.TextChoices(), m) {
 		return m
 	}
-	return s.Cfg.KenariTextModel
+	return s.AI.DefaultText()
 }
 
 func (s *Server) pickImageModel(m string) string {
-	if m != "" && slices.Contains(s.Cfg.KenariImageModels, m) {
+	if m != "" && slices.Contains(s.AI.ImageChoices(), m) {
 		return m
 	}
-	return s.Cfg.KenariImageModel
+	return s.AI.DefaultImage()
+}
+
+// pickEditModel: model gambar pilihan kalau providernya bisa edit gambar (kenari,
+// OpenRouter); kalau tidak, model edit pertama yang tersedia.
+func (s *Server) pickEditModel(m string) string {
+	m = s.pickImageModel(m)
+	edits := s.AI.EditChoices()
+	if slices.Contains(edits, m) || len(edits) == 0 {
+		return m
+	}
+	return edits[0]
 }
 
 // loadExamples mengambil desain AI yang pernah diberi rating oleh user (personalisasi).
@@ -311,7 +332,7 @@ func (s *Server) aiImageEdit(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 400, "url atau dataUrl wajib diisi")
 		return
 	}
-	model := s.pickImageModel(req.Model)
+	model := s.pickEditModel(req.Model)
 	img, err := s.AI.EditImage(r.Context(), model, req.Prompt, &src)
 	if err != nil {
 		s.aiError(w, err)

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kikiraihan/racik/backend/internal/ai"
 	"github.com/kikiraihan/racik/backend/internal/config"
 	"github.com/kikiraihan/racik/backend/internal/db"
 	"github.com/kikiraihan/racik/backend/internal/handlers"
@@ -37,9 +38,12 @@ func main() {
 		Handler:           handlers.New(conn, cfg).Routes(),
 		ReadHeaderTimeout: 10 * time.Second,
 		// Write timeout dibuat panjang karena generate AI bisa memakan waktu lama.
-		WriteTimeout: time.Duration(cfg.AITimeoutSec+30) * time.Second,
+		// Magic Design = 1 panggilan teks + gambar (maks 4, paralel 3 → 2 putaran),
+		// jadi bisa sampai 3x AI_TIMEOUT_SEC.
+		WriteTimeout: time.Duration(3*cfg.AITimeoutSec+30) * time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
+	go checkModels(ctx, cfg)
 	go func() {
 		log.Printf("Racik API berjalan di %s (AI kenari.id aktif: %v)", cfg.Addr, cfg.KenariAPIKey != "")
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -51,4 +55,15 @@ func main() {
 	defer cancel()
 	_ = srv.Shutdown(shutdownCtx)
 	log.Println("server berhenti")
+}
+
+// checkModels mencocokkan model di env dengan daftar /models provider (kenari, Groq,
+// NVIDIA teks, OpenRouter) dan hanya mencatat peringatan — id model yang salah baru
+// ketahuan saat user generate.
+func checkModels(ctx context.Context, cfg config.Config) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	for _, w := range ai.FromConfig(cfg).CheckModels(ctx) {
+		log.Printf("PERINGATAN %s", w)
+	}
 }
