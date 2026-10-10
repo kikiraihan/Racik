@@ -235,8 +235,9 @@ async function uploadInto(e: Event) {
 .num .input { width: 48px; border: 0; text-align: center; padding: 0; -moz-appearance: textfield; }
 .num .input::-webkit-inner-spin-button { display: none; }
 .wrap { position: relative; }
-.p { position: fixed; top: 108px; width: 250px; display: flex; flex-direction: column; gap: 10px; }
+.p { position: fixed; top: 76px; width: 250px; display: flex; flex-direction: column; gap: 10px; }
 .p.right { right: 16px; }
+@media (max-width: 900px) { .p { top: 132px; } }
 .bd { width: 14px; height: 14px; border: 3px solid; border-radius: 3px; display: inline-block; }
 .ph { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

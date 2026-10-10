@@ -11,7 +11,7 @@ const TITLES: Record<string, string> = {
   <div class="sp">
     <div class="hd row">
       <b class="grow">{{ TITLES[tab] }}</b>
-      <button class="btn ghost sm icon" title="Tutup panel" @click="emit('close')"><Icon name="left" :size="16" /></button>
+      <button class="btn ghost sm icon" title="Tutup panel" @click="emit('close')"><Icon name="x" :size="16" /></button>
     </div>
     <div class="ct">
       <EditorPanelAi v-if="tab === 'ai'" />

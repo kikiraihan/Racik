@@ -34,7 +34,9 @@ Racik adalah web app editor desain (gaya Canva) dengan **AI auto-generate desain
 - Latar: warna, gradien (atur arah), gambar latar
 - Gambar bebas (kuas), warna & ketebalan
 - Undo/redo per halaman, salin/tempel/duplikat, menu klik-kanan, pintasan keyboard lengkap
-- Zoom (Ctrl+scroll, slider, pas ke layar), **Magic Resize** ke ukuran lain dengan skala isi
+- Zoom (Ctrl+scroll, tombol +/−, pas ke layar), **Magic Resize** ke ukuran lain dengan skala isi
+- **Board kanvas**: semua halaman tampil berjajar sebagai frame; geser board (scroll, alat geser `H`, tahan Spasi, atau seret area kosong), klik frame untuk mengedit, seret label frame untuk memindah posisinya
+- Layout editor: sidebar kiri (judul, token warna & font, layer, daftar halaman) dan sidebar kanan (akun, Export, riwayat AI, properti, saldo) yang bisa ditutup (`Ctrl+\`), tool rail & kontrol zoom melayang, serta **kotak chat AI melayang** di bawah kanvas (Perbaiki halaman / Halaman baru / Gambar AI)
 - Autosave ke server + thumbnail
 - **Export**: PNG (bisa transparan), JPG, PDF multi halaman, **PPTX dengan teks yang bisa diedit** (atau mode gambar penuh), SVG, Racik JSON; multi halaman otomatis di-zip untuk format gambar
 
