@@ -5,7 +5,7 @@ Racik adalah web app editor desain (gaya Canva) dengan **AI auto-generate desain
 - **Frontend**: Vue 3 + Nuxt 3 (SPA), editor kanvas berbasis [fabric.js](http://fabricjs.com) v6, export memakai `pptxgenjs`, `jspdf`, `jszip`
 - **Backend**: Go native (`net/http` standard library, tanpa framework), JWT & hashing password juga pakai stdlib
 - **Database**: PostgreSQL (driver `pgx`), migrasi SQL otomatis saat start
-- **AI connector**: gateway [kenari.id](https://kenari.id) (format OpenAI-compatible) → Claude untuk layout, Nano Banana / GPT Image untuk gambar
+- **AI connector**: gateway [kenari.id](https://kenari.id) (format OpenAI-compatible) → Claude untuk layout, Nano Banana / GPT Image untuk gambar; provider lain (Anthropic, Groq, NVIDIA NIM, Agnes AI, OpenRouter, Hugging Face, Pollinations) bisa diaktifkan lewat env
 
 ---
 
@@ -45,7 +45,7 @@ Racik adalah web app editor desain (gaya Canva) dengan **AI auto-generate desain
 - **Edit gambar AI**: ubah gambar terpilih dengan instruksi
 - **Copywriting**: 5 alternatif headline/tagline/caption/CTA, atau tulis ulang teks terpilih
 - **Personalisasi**: rating 👍/👎 + masukan, Brand Kit (warna, font, logo, tone of voice) otomatis dipakai AI
-- Pemilihan model teks & gambar dari UI (daftar diatur lewat env)
+- Pemilihan model teks & gambar dari UI lintas provider (daftar diatur lewat env)
 
 ### Lainnya
 - Landing page = kotak prompt AI, ukuran preset, galeri template (8 template bawaan), desain terbaru (cari, bintangi, duplikat, hapus)
@@ -60,7 +60,7 @@ Racik adalah web app editor desain (gaya Canva) dengan **AI auto-generate desain
 backend/
   cmd/server        # API server
   cmd/mockkenari    # server tiruan kenari.id untuk demo/testing tanpa API key
-  internal/ai       # konektor kenari.id (chat, image generate/edit) + prompt designer
+  internal/ai       # konektor AI: kenari.id + provider lain (router.go), prompt designer
   internal/auth     # PBKDF2 + JWT HS256 (stdlib)
   internal/db       # koneksi & migrasi (migrations/*.sql)
   internal/handlers # REST API + templates.json bawaan
@@ -146,6 +146,31 @@ Perilaku kenari yang ditangani konektor (`backend/internal/ai/kenari.go`):
   tidak untuk saldo habis (402), kuota (429), atau timeout, supaya tidak tertagih dua kali.
 - Blok `<think>…</think>` dari model reasoning dibuang sebelum JSON dibaca; jawaban kosong karena
   token habis untuk reasoning menghasilkan pesan error yang jelas.
+
+### Provider AI lain
+
+Selain kenari, backend bisa memakai provider yang juga dipakai katilidev. Provider aktif begitu
+API key-nya diisi; modelnya muncul di dropdown UI dengan id `<provider>:<model>` (label
+`model · Provider`). Model default lintas provider diatur dengan `AI_TEXT_MODEL` / `AI_IMAGE_MODEL`
+(mis. `anthropic:claude-sonnet-5-5`); kosong = model kenari, atau model pertama provider aktif
+kalau kenari tidak diisi. Urutan di dropdown: kenari, anthropic, groq, nvidia, agnes, openrouter,
+huggingface, pollinations.
+
+| Provider | Env key | Teks | Gambar | Edit gambar | Catatan |
+|---|---|---|---|---|---|
+| kenari | `KENARI_API_KEY` | ✔ | ✔ | ✔ | cadangan teks `nemotron-3-super-120b-a12b:free` (juga saat saldo habis), gambar `nano-banana-2-lite` |
+| Anthropic | `ANTHROPIC_API_KEY` | ✔ | – | – | SDK resmi; `ANTHROPIC_EFFORT` (default `medium`); Sonnet/Opus 5.5 memakai server-side fallback saat permintaan ditolak |
+| Groq | `GROQ_API_KEY` | ✔ | – | – | GPT-OSS dengan `reasoning_effort: low`; model yang dicabut → `openai/gpt-oss-120b` |
+| NVIDIA NIM | `NVIDIA_API_KEY` | ✔ | ✔ | – | teks `integrate.api.nvidia.com`, gambar endpoint GenAI (FLUX.2/FLUX.1/SD3, ukuran kelipatan 64, prompt ≤ 800 karakter, polling 202/NVCF); cadangan model default |
+| Agnes AI | `AGNES_API_KEY` | ✔ | ✔ | – | gambar diminta `size: 1K` + rasio terdekat; cadangan model 2.x |
+| OpenRouter | `OPENROUTER_API_KEY` | ✔* | ✔ | ✔ | gambar & edit lewat chat completions (`modalities`); *isi `OPENROUTER_TEXT_MODELS` untuk teks |
+| Hugging Face | `HUGGINGFACE_API_KEY` | – | ✔ | – | Inference API (`router.huggingface.co`); 503 = model sedang dimuat |
+| Pollinations | `POLLINATIONS_ENABLED=true` | – | ✔ | – | gratis tanpa key |
+
+Edit gambar hanya didukung kenari dan OpenRouter. Kalau model gambar terpilih berasal dari provider
+lain, backend memakai model edit pertama yang tersedia. Saat start, model kenari, Groq, NVIDIA (teks)
+dan OpenRouter dicocokkan dengan `GET /models` masing-masing; yang tidak dikenal ditulis sebagai
+`PERINGATAN` di log.
 
 ---
 

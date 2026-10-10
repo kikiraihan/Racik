@@ -126,5 +126,7 @@ export interface AIModels {
   textModels: string[]
   imageModel: string
   imageModels: string[]
+  editModels?: string[] // model gambar yang providernya bisa edit gambar
+  labels?: Record<string, string> // id "<provider>:<model>" → teks tampilan
   fonts: string[]
 }

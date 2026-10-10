@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/kikiraihan/racik/backend/internal/ai"
 	"github.com/kikiraihan/racik/backend/internal/config"
@@ -16,12 +15,12 @@ import (
 type Server struct {
 	DB  *sql.DB
 	Cfg config.Config
-	AI  *ai.Client
+	AI  *ai.Router
 }
 
 func New(db *sql.DB, cfg config.Config) *Server {
 	_ = os.MkdirAll(cfg.UploadDir, 0o755)
-	return &Server{DB: db, Cfg: cfg, AI: ai.New(cfg.KenariBaseURL, cfg.KenariAPIKey, time.Duration(cfg.AITimeoutSec)*time.Second)}
+	return &Server{DB: db, Cfg: cfg, AI: ai.FromConfig(cfg)}
 }
 
 func (s *Server) Routes() http.Handler {
@@ -60,7 +59,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/brand-kit", auth(s.getBrandKit))
 	mux.HandleFunc("PUT /api/brand-kit", auth(s.putBrandKit))
 
-	// AI connector (kenari.id)
+	// AI connector (kenari.id + provider lain, lihat internal/ai/router.go)
 	mux.HandleFunc("GET /api/ai/models", s.aiModels)
 	mux.HandleFunc("POST /api/ai/design", auth(s.aiDesign))
 	mux.HandleFunc("POST /api/ai/refine", auth(s.aiRefine))

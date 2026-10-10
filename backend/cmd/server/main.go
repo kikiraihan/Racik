@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os/signal"
-	"slices"
 	"syscall"
 	"time"
 
@@ -44,9 +43,7 @@ func main() {
 		WriteTimeout: time.Duration(3*cfg.AITimeoutSec+30) * time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
-	if cfg.KenariAPIKey != "" {
-		go checkKenariModels(ctx, cfg)
-	}
+	go checkModels(ctx, cfg)
 	go func() {
 		log.Printf("Racik API berjalan di %s (AI kenari.id aktif: %v)", cfg.Addr, cfg.KenariAPIKey != "")
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -60,25 +57,13 @@ func main() {
 	log.Println("server berhenti")
 }
 
-// checkKenariModels mencocokkan model di env dengan GET {KENARI_BASE_URL}/models dan
-// hanya mencatat peringatan — id model yang salah baru ketahuan saat user generate.
-func checkKenariModels(ctx context.Context, cfg config.Config) {
+// checkModels mencocokkan model di env dengan daftar /models provider (kenari, Groq,
+// NVIDIA teks, OpenRouter) dan hanya mencatat peringatan — id model yang salah baru
+// ketahuan saat user generate.
+func checkModels(ctx context.Context, cfg config.Config) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	client := ai.New(cfg.KenariBaseURL, cfg.KenariAPIKey, 30*time.Second)
-	for _, g := range []struct {
-		endpoint string
-		models   []string
-	}{{"chat", cfg.KenariTextModels}, {"images", cfg.KenariImageModels}} {
-		ids, err := client.ListModels(ctx, g.endpoint)
-		if err != nil || len(ids) == 0 {
-			log.Printf("kenari: daftar model (%s) tidak bisa dibaca, cek model dilewati: %v", g.endpoint, err)
-			return
-		}
-		for _, m := range g.models {
-			if !slices.Contains(ids, m) {
-				log.Printf("PERINGATAN kenari: model %q tidak ada di daftar /models (%s) — cek KENARI_*_MODEL(S) di .env", m, g.endpoint)
-			}
-		}
+	for _, w := range ai.FromConfig(cfg).CheckModels(ctx) {
+		log.Printf("PERINGATAN %s", w)
 	}
 }

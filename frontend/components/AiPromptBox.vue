@@ -93,10 +93,10 @@ async function submit() {
         <input v-model="withImages" type="checkbox" /> Buat gambar AI
       </label>
       <select v-if="withImages && models" v-model="imageModel" class="select sm opt" style="width: 190px" title="Model gambar">
-        <option v-for="m in models.imageModels" :key="m" :value="m">{{ m }}</option>
+        <option v-for="m in models.imageModels" :key="m" :value="m">{{ models.labels?.[m] ?? m }}</option>
       </select>
       <select v-if="models && models.textModels.length > 1" v-model="textModel" class="select sm opt" style="width: 170px" title="Model teks">
-        <option v-for="m in models.textModels" :key="m" :value="m">{{ m }}</option>
+        <option v-for="m in models.textModels" :key="m" :value="m">{{ models.labels?.[m] ?? m }}</option>
       </select>
       <div class="grow" />
       <button class="btn grad go" :disabled="loading" @click="submit">
@@ -106,7 +106,7 @@ async function submit() {
       </button>
     </div>
     <div v-if="models && !models.configured" class="warn">
-      Konektor AI belum aktif. Isi <code>KENARI_API_KEY</code> di backend (lihat README) — atau jalankan mock AI untuk demo.
+      Konektor AI belum aktif. Isi <code>KENARI_API_KEY</code> (atau API key provider lain: Anthropic, Groq, NVIDIA, Agnes, OpenRouter) di backend (lihat README) — atau jalankan mock AI untuk demo.
     </div>
     <div v-if="loading" class="progress">
       <div v-for="(s, i) in STEPS" :key="s" class="st" :class="{ done: i < step, cur: i === step }">

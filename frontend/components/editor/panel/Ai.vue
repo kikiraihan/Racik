@@ -139,7 +139,7 @@ function useCopy(t: string) {
 
 <template>
   <div>
-    <div v-if="models && !models.configured" class="warn">Konektor AI (kenari.id) belum aktif. Isi <code>KENARI_API_KEY</code> di backend.</div>
+    <div v-if="models && !models.configured" class="warn">Konektor AI belum aktif. Isi <code>KENARI_API_KEY</code> (atau API key provider lain, lihat README) di backend.</div>
     <div class="tabs">
       <button class="chip" :class="{ on: section === 'design' }" @click="section = 'design'">Magic Design</button>
       <button class="chip" :class="{ on: section === 'refine' }" @click="section = 'refine'">Perbaiki</button>
@@ -148,11 +148,11 @@ function useCopy(t: string) {
     </div>
 
     <details v-if="models" class="models">
-      <summary class="muted">Model AI: {{ textModel }} · {{ imageModel }}</summary>
+      <summary class="muted">Model AI: {{ models.labels?.[textModel] ?? textModel }} · {{ models.labels?.[imageModel] ?? imageModel }}</summary>
       <label><span class="label">Model teks / layout</span>
-        <select v-model="textModel" class="select sm"><option v-for="m in models.textModels" :key="m">{{ m }}</option></select></label>
+        <select v-model="textModel" class="select sm"><option v-for="m in models.textModels" :key="m" :value="m">{{ models.labels?.[m] ?? m }}</option></select></label>
       <label><span class="label">Model gambar</span>
-        <select v-model="imageModel" class="select sm"><option v-for="m in models.imageModels" :key="m">{{ m }}</option></select></label>
+        <select v-model="imageModel" class="select sm"><option v-for="m in models.imageModels" :key="m" :value="m">{{ models.labels?.[m] ?? m }}</option></select></label>
     </details>
 
     <!-- Magic Design -->
