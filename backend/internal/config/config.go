@@ -44,8 +44,10 @@ func Load() Config {
 		AITimeoutSec: envInt("AI_TIMEOUT_SEC", 300),
 	}
 	// Id model harus persis sama dengan daftar GET https://kenari.id/v1/models
-	// (publik). Default di bawah diambil dari katalog yang dipakai katilidev (Okt 2026).
-	c.KenariTextModel = env("KENARI_TEXT_MODEL", "claude-haiku-5-5")
+	// (publik). Default di bawah diambil dari katalog yang dipakai katilidev (Okt 2026),
+	// kecuali claude-sonnet-5-5: id-nya ditebak dari pola kenari (claude-haiku-5-5),
+	// belum dicek ke /models — kalau salah, log start menulis PERINGATAN.
+	c.KenariTextModel = env("KENARI_TEXT_MODEL", "claude-sonnet-5-5")
 	c.KenariTextModels = withDefault(c.KenariTextModel, list(env("KENARI_TEXT_MODELS", c.KenariTextModel)))
 	c.KenariImageModel = env("KENARI_IMAGE_MODEL", "gpt-image-2")
 	c.KenariImageModels = withDefault(c.KenariImageModel, list(env("KENARI_IMAGE_MODELS", c.KenariImageModel+",nano-banana-2")))

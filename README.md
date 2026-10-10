@@ -126,7 +126,7 @@ Ubah target proxy dengan `NUXT_API_TARGET=http://host:port` (dipakai saat `dev` 
 |---|---|---|
 | `KENARI_BASE_URL` | `https://kenari.id/v1` | Base URL OpenAI-compatible |
 | `KENARI_API_KEY` | – | API key kenari.id (wajib untuk AI) |
-| `KENARI_TEXT_MODEL(S)` | `claude-haiku-5-5` | Model untuk layout & copy (Claude) |
+| `KENARI_TEXT_MODEL(S)` | `claude-sonnet-5-5` | Model untuk layout & copy (Claude) |
 | `KENARI_IMAGE_MODEL(S)` | `gpt-image-2`, `nano-banana-2` | GPT Image / Nano Banana |
 | `AI_TIMEOUT_SEC` | `300` | Timeout per request AI (docs kenari menyarankan ≥ 5 menit untuk gambar) |
 
