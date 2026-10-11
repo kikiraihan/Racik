@@ -196,6 +196,7 @@ dan OpenRouter dicocokkan dengan `GET /models` masing-masing; yang tidak dikenal
 Production berjalan di VPS yang sama dengan katilidev & our-life-planner (nginx host +
 Cloudflare di depan, container hanya di `127.0.0.1`).
 
+- **[_docs/SETUP_SERVER_VM.md](_docs/SETUP_SERVER_VM.md)** — panduan langkah demi langkah setup di VM (checklist, perintah berurutan, cek tiap langkah).
 - **[DEPLOY.md](DEPLOY.md)** — setup server pertama kali: port, `.env`, nginx host, certbot, Cloudflare, backup.
 - **[CICD.md](CICD.md)** — auto deploy tiap `git push origin main` (GitHub Actions → SSH → `scripts/deploy.sh`,
   backup DB, health check, auto-rollback).
