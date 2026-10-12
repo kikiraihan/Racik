@@ -19,6 +19,8 @@ type Server struct {
 	Cfg config.Config
 	AI  *ai.Router
 	Log *applog.Logger // system log: activity user & request ke vendor AI (Elasticsearch)
+	// ServerLog: baris log server terakhir di memori (menu Log server di panel admin).
+	ServerLog *applog.Ring
 
 	Google *auth.GoogleVerifier // verifikasi ID token untuk login Google
 }
@@ -100,6 +102,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/admin/pricing", admin(s.adminGetPricing))
 	mux.HandleFunc("PUT /api/admin/pricing", track("admin.pricing", admin(s.adminPutPricing)))
 	mux.HandleFunc("GET /api/admin/logs", admin(s.adminLogs))
+	mux.HandleFunc("GET /api/admin/overview", admin(s.adminOverview))
+	mux.HandleFunc("GET /api/admin/server-logs", admin(s.adminServerLogs))
 
 	// File statis hasil upload / AI
 	files := http.StripPrefix("/uploads/", http.FileServer(http.Dir(filepath.Clean(s.Cfg.UploadDir))))

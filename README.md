@@ -59,6 +59,10 @@ Racik adalah web app editor desain (gaya Canva) dengan **AI auto-generate desain
 - **Konfigurasi harga** (Panel admin): harga ke user = **harga vendor + 5%** (markup global bisa diubah, juga markup khusus per model); model yang gratis di vendor / belum diatur = **Rp 100 per hit**. Harga vendor diisi admin dalam Rupiah per hit.
 - **Tambah saldo oleh admin** (tahap testing, sebelum ada payment gateway): Panel admin → Pengguna & saldo → tombol **+ Saldo** (nilai negatif = koreksi). Tercatat di riwayat saldo & activity log.
 - **System log ke Elasticsearch** (lihat [System log](#system-log-elasticsearch)): activity user untuk fitur riskan (login/daftar/tamu, hit model AI, aksi admin) dan semua request ke vendor AI. Bisa dicari dari **Panel admin → System log** atau Kibana.
+- **Panel admin** (`/admin`) punya tampilan sendiri, beda dari halaman public: sidebar gelap (bisa diciutkan `Ctrl+\`, jadi drawer di mobile), topbar dengan judul halaman, dan **mode gelap** (terang / gelap / ikut sistem, hanya berlaku di panel admin). Menu:
+  - **Ringkasan**: jumlah user, generate AI hari ini, pemakaian saldo & top up 30 hari, desain tersimpan, kepuasan hasil AI, grafik 14 hari, generate per fitur, status sistem (provider AI, model aktif, Elasticsearch, login Google, log server), transaksi saldo terbaru
+  - **Pengguna & saldo**, **Konfigurasi AI**, **Konfigurasi harga**
+  - **System log** (Elasticsearch) dan **Log server**: 3000 baris log backend terakhir dari memori (access log HTTP, peringatan, error) dengan filter level/sumber, pencarian, live refresh, dan unduh `.txt` — tetap bisa dipakai walaupun Elasticsearch belum diatur (isinya hilang saat backend restart)
 
 ### Lainnya
 - Landing page = kotak prompt AI, ukuran preset, galeri template (8 template bawaan), desain terbaru (cari, bintangi, duplikat, hapus)
@@ -262,6 +266,8 @@ Kenapa Elasticsearch: cocok untuk log terstruktur yang perlu dicari & difilter (
 | GET | `/api/admin/users/{id}/transactions` | (admin) Riwayat saldo user |
 | GET/PUT | `/api/admin/ai-config` | (admin) Model teks / gambar / edit gambar |
 | GET/PUT | `/api/admin/pricing` | (admin) Markup global, tarif model gratis, harga vendor per model |
+| GET | `/api/admin/overview` | (admin) Angka ringkasan untuk halaman Ringkasan |
+| GET | `/api/admin/server-logs` | (admin) Log server dari memori (`q`, `level=info\|warn\|error`, `source=http\|app\|log`, `after`, `limit`) |
 | GET | `/api/admin/logs` | (admin) Cari system log (`type=activity\|vendor`, `q`, `action`, `success`, `userId`, `from`, `to`, `page`) |
 
 ## Testing
