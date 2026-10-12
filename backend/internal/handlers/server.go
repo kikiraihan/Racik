@@ -9,6 +9,7 @@ import (
 
 	"github.com/kikiraihan/racik/backend/internal/ai"
 	"github.com/kikiraihan/racik/backend/internal/applog"
+	"github.com/kikiraihan/racik/backend/internal/auth"
 	"github.com/kikiraihan/racik/backend/internal/config"
 	"github.com/kikiraihan/racik/backend/internal/httpx"
 )
@@ -18,11 +19,13 @@ type Server struct {
 	Cfg config.Config
 	AI  *ai.Router
 	Log *applog.Logger // system log: activity user & request ke vendor AI (Elasticsearch)
+
+	Google *auth.GoogleVerifier // verifikasi ID token untuk login Google
 }
 
 func New(db *sql.DB, cfg config.Config, logger *applog.Logger) *Server {
 	_ = os.MkdirAll(cfg.UploadDir, 0o755)
-	s := &Server{DB: db, Cfg: cfg, AI: ai.FromConfig(cfg), Log: logger}
+	s := &Server{DB: db, Cfg: cfg, AI: ai.FromConfig(cfg), Log: logger, Google: auth.NewGoogleVerifier(cfg.GoogleClientIDs)}
 	s.AI.Observe = s.logVendorCall
 	return s
 }
@@ -48,6 +51,9 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/auth/guest", track("auth.guest", s.guest))
 	mux.HandleFunc("POST /api/auth/upgrade", track("auth.upgrade", auth(s.upgradeGuest)))
 	mux.HandleFunc("GET /api/auth/me", auth(s.me))
+	// Login Google: config publik (client ID) untuk tombol di frontend + tukar ID token jadi JWT Racik.
+	mux.HandleFunc("GET /api/auth/config", s.authConfig)
+	mux.HandleFunc("POST /api/auth/google", track("auth.google", s.googleAuth))
 
 	// Designs
 	mux.HandleFunc("GET /api/designs", auth(s.listDesigns))

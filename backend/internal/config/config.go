@@ -50,6 +50,11 @@ type Config struct {
 	AdminEmails   []string
 	AdminPassword string
 
+	// Sign in / sign up dengan Google (Google Identity Services). Isi dengan OAuth Client ID
+	// tipe "Web application" dari Google Cloud Console; kosong = tombol Google disembunyikan.
+	// Boleh lebih dari satu (pisahkan koma), mis. client ID terpisah untuk dev & production.
+	GoogleClientIDs []string
+
 	// Tarif default, hanya dipakai untuk mengisi menu Konfigurasi Harga pertama kali.
 	// Setelah itu harga diatur admin dari UI (tersimpan di tabel app_settings / model_prices).
 	DefaultMarkupPercent float64 // harga user = harga vendor + markup %
@@ -143,6 +148,7 @@ func Load() Config {
 
 	c.AdminEmails = list(strings.ToLower(env("ADMIN_EMAILS", "")))
 	c.AdminPassword = env("ADMIN_PASSWORD", "")
+	c.GoogleClientIDs = list(env("GOOGLE_CLIENT_ID", ""))
 	c.DefaultMarkupPercent = envFloat("PRICE_MARKUP_PERCENT", 5)
 	c.DefaultFreeHitPrice = int64(envInt("PRICE_FREE_HIT", 100))
 

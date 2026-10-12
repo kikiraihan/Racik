@@ -137,7 +137,24 @@ cd frontend && npm install && npm run dev
 
 Ubah target proxy dengan `NUXT_API_TARGET=http://host:port` (dipakai saat `dev` dan saat `build`).
 
-### Konfigurasi kenari.id
+### Login Google
+
+Sign in / sign up dengan Google memakai [Google Identity Services](https://developers.google.com/identity/gsi/web)
+(tombol "Masuk/Daftar dengan Google" di halaman `/login`). Aktifkan dengan:
+
+1. Google Cloud Console → **APIs & Services → OAuth consent screen**: isi nama app & email support.
+2. **Credentials → Create credentials → OAuth client ID** → tipe **Web application**.
+3. Di **Authorized JavaScript origins** tambahkan origin frontend, mis. `http://localhost:3000`,
+   `http://localhost:8091`, `https://racik.katili.dev`. (Redirect URI tidak perlu — mode popup.)
+4. Isi `GOOGLE_CLIENT_ID=<client id>` di `.env` lalu restart backend. Client secret **tidak** dipakai.
+   Frontend membaca client ID dari `GET /api/auth/config` saat runtime, jadi tidak perlu build ulang.
+
+Backend memverifikasi ID token secara lokal (tanda tangan RS256 dengan kunci publik Google yang
+di-cache, `aud`, `iss`, `exp`, `email_verified`). Pencocokan akun: id akun Google (`google_sub`)
+→ email yang sudah terdaftar (akun dihubungkan otomatis) → akun tamu yang sedang aktif
+(di-upgrade, desain tetap tersimpan) → akun baru. Akun yang daftar lewat Google tidak punya
+password, jadi login email + password untuk akun itu ditolak dengan pesan untuk masuk lewat Google.
+
 
 | Env | Default | Keterangan |
 |---|---|---|
@@ -210,7 +227,7 @@ Dua jenis log dikirim asinkron (batch lewat Bulk API, tidak memperlambat request
 
 | Index | Isi |
 |---|---|
-| `racik-activity-YYYY.MM` | Request user ke Racik untuk fitur riskan: `auth.login` (termasuk gagal + email yang dicoba + alasan), `auth.register`, `auth.guest`, `auth.upgrade`, `ai.design`/`ai.refine`/`ai.image`/`ai.image_edit`/`ai.copy` (prompt ringkas, saldo dipotong/dikembalikan), `admin.balance`, `admin.user_role`, `admin.ai_config`, `admin.pricing`. Field: `@timestamp`, `request_id`, `action`, `user_id`, `email`, `ip`, `user_agent`, `status`, `success`, `duration_ms`, `error`, `details` |
+| `racik-activity-YYYY.MM` | Request user ke Racik untuk fitur riskan: `auth.login` (termasuk gagal + email yang dicoba + alasan), `auth.register`, `auth.google`, `auth.guest`, `auth.upgrade`, `ai.design`/`ai.refine`/`ai.image`/`ai.image_edit`/`ai.copy` (prompt ringkas, saldo dipotong/dikembalikan), `admin.balance`, `admin.user_role`, `admin.ai_config`, `admin.pricing`. Field: `@timestamp`, `request_id`, `action`, `user_id`, `email`, `ip`, `user_agent`, `status`, `success`, `duration_ms`, `error`, `details` |
 | `racik-vendor-YYYY.MM` | Request Racik ke vendor AI: `provider`, `model`, `operation` (chat/image/edit), `feature`, `duration_ms`, `success`, `status`/`error_code`/`error` asli vendor, `prompt`, `vendor_price`, `user_price`, `user_id`, `request_id` |
 
 - `request_id` sama dengan header `X-Request-ID`, kode yang tampil di pesan error user, dan kolom `request_id` di `wallet_transactions` — jadi satu keluhan user bisa ditelusuri sampai ke request vendor-nya.
@@ -225,6 +242,8 @@ Kenapa Elasticsearch: cocok untuk log terstruktur yang perlu dicari & difilter (
 | Method | Path | Keterangan |
 |---|---|---|
 | POST | `/api/auth/register` · `/login` · `/guest` · `/upgrade` | Auth (JWT) |
+| GET | `/api/auth/config` | Config auth publik (`googleClientId`, kosong = login Google nonaktif) |
+| POST | `/api/auth/google` | Sign in / sign up dengan Google (`{credential}` = ID token Google Identity Services) |
 | GET | `/api/auth/me` | User aktif |
 | GET/POST | `/api/designs` | List / buat desain |
 | GET/PUT/DELETE | `/api/designs/{id}` | Detail / simpan / hapus |
