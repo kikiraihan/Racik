@@ -3,6 +3,14 @@ export const ICON_PATHS: Record<string, string> = {
   // ikon layout editor (sidebar, tool rail, chat AI)
   panelLeft: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M9 3v18',
   panelRight: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M15 3v18',
+  // ikon panel admin (sidebar, topbar, log)
+  menu: 'M4 6h16 M4 12h16 M4 18h16',
+  terminal: 'M4 17l6-6-6-6 M12 19h8',
+  refresh: 'M21 12a9 9 0 0 1-15.5 6.2L3 16 M3 21v-5h5 M3 12a9 9 0 0 1 15.5-6.2L21 8 M21 3v5h-5',
+  activity: 'M22 12h-4l-3 9L9 3l-3 9H2',
+  monitor: 'M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M8 21h8 M12 17v4',
+  pause: 'M7 4h3v16H7z M14 4h3v16h-3z',
+  play: 'M6 4l14 8-14 8z',
   pointer: 'M4.04 4.69a.5.5 0 0 1 .65-.65l16 6.5a.5.5 0 0 1-.06.95l-6.13 1.58a2 2 0 0 0-1.43 1.43l-1.58 6.13a.5.5 0 0 1-.95.06z',
   hand: 'M18 11V6a2 2 0 0 0-4 0 M14 10V4a2 2 0 0 0-4 0v2 M10 10.5V6a2 2 0 0 0-4 0v8 M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15',
   arrowUp: 'M12 19V5 M5 12l7-7 7 7',

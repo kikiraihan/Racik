@@ -4,8 +4,10 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -18,6 +20,11 @@ import (
 )
 
 func main() {
+	// Log server juga disimpan di memori (3000 baris terakhir) supaya bisa dilihat dari
+	// Panel admin → Log server tanpa akses ke container.
+	serverLog := applog.NewRing(3000)
+	log.SetOutput(io.MultiWriter(os.Stderr, serverLog))
+
 	cfg := config.Load()
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -53,9 +60,11 @@ func main() {
 		}
 	}()
 
+	api := handlers.New(conn, cfg, logger)
+	api.ServerLog = serverLog
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           handlers.New(conn, cfg, logger).Routes(),
+		Handler:           api.Routes(),
 		ReadHeaderTimeout: 10 * time.Second,
 		// Write timeout dibuat panjang karena generate AI bisa memakan waktu lama.
 		// Magic Design = 1 panggilan teks + gambar (maks 4, paralel 3 → 2 putaran),
