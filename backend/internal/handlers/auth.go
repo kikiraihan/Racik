@@ -115,6 +115,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, 401, "email atau password salah")
 		return
 	}
+	if err == nil && hash == "" {
+		// Akun daftar lewat Google, belum punya password.
+		activity(r, "reason", "google_only")
+		activity(r, "target_user_id", u.ID)
+		httpx.Error(w, 401, "akun ini terdaftar lewat Google, silakan masuk dengan Google")
+		return
+	}
 	if err == nil && !auth.CheckPassword(hash, c.Password) {
 		activity(r, "reason", "wrong_password")
 		activity(r, "target_user_id", u.ID)
@@ -195,4 +202,130 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, 200, u)
+}
+
+// GET /api/auth/config — konfigurasi auth publik untuk frontend (tombol Google tampil kalau
+// googleClientId terisi). Dibaca saat runtime supaya client ID tidak perlu ditanam saat build.
+func (s *Server) authConfig(w http.ResponseWriter, r *http.Request) {
+	clientID := ""
+	if s.Google.Enabled() {
+		clientID = s.Google.ClientIDs[0]
+	}
+	httpx.JSON(w, 200, map[string]any{"googleClientId": clientID})
+}
+
+// POST /api/auth/google {credential} — sign in / sign up dengan Google. credential adalah ID
+// token dari Google Identity Services, diverifikasi di backend (tanda tangan, aud, iss, exp,
+// email terverifikasi). Urutan pencocokan akun:
+//  1. google_sub sudah terhubung → login.
+//  2. email sudah terdaftar (daftar manual) → akun dihubungkan dengan Google lalu login.
+//  3. request membawa token akun tamu → akun tamu di-upgrade (desain tetap tersimpan).
+//  4. selain itu → akun baru dibuat.
+func (s *Server) googleAuth(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Credential string `json:"credential"`
+	}
+	if err := httpx.Decode(r, &req, 1<<16); err != nil || req.Credential == "" {
+		httpx.Error(w, 400, "body tidak valid")
+		return
+	}
+	if !s.Google.Enabled() {
+		httpx.Error(w, 404, "login Google belum diaktifkan")
+		return
+	}
+	g, err := s.Google.Verify(r.Context(), req.Credential)
+	if err != nil {
+		activity(r, "reason", err.Error())
+		httpx.Error(w, 401, "login Google gagal: "+err.Error())
+		return
+	}
+	email := strings.ToLower(strings.TrimSpace(g.Email))
+	name := strings.TrimSpace(g.Name)
+	activity(r, "email", email)
+	ctx := r.Context()
+
+	var u userDTO
+	var googleSub sql.NullString
+	err = s.DB.QueryRowContext(ctx,
+		`SELECT id, email, name, is_guest, role, balance, google_sub FROM users WHERE google_sub=$1 OR email=$2
+		 ORDER BY (google_sub=$1) DESC NULLS LAST LIMIT 1`, g.Sub, email).
+		Scan(&u.ID, &u.Email, &u.Name, &u.IsGuest, &u.Role, &u.Balance, &googleSub)
+	switch {
+	case err == nil:
+		// Akun ada. Email sama tapi sudah terhubung ke akun Google lain → tolak.
+		if googleSub.Valid && googleSub.String != g.Sub {
+			activity(r, "reason", "google_sub_mismatch")
+			httpx.Error(w, 409, "email ini sudah terhubung dengan akun Google lain")
+			return
+		}
+		if !googleSub.Valid {
+			activity(r, "linked", true)
+		}
+		if u.Name == "" {
+			u.Name = name
+		}
+		if u.Role != RoleAdmin && s.isAdminEmail(u.Email) {
+			u.Role = RoleAdmin
+		}
+		if _, err := s.DB.ExecContext(ctx, `UPDATE users SET google_sub=$2, name=$3, role=$4 WHERE id=$1`,
+			u.ID, g.Sub, u.Name, u.Role); err != nil {
+			httpx.Error(w, 500, err.Error())
+			return
+		}
+		activity(r, "role", u.Role)
+		s.issue(w, r, 200, u)
+		return
+	case !errors.Is(err, sql.ErrNoRows):
+		httpx.Error(w, 500, err.Error())
+		return
+	}
+
+	// Akun belum ada: daftar. Kalau sedang memakai akun tamu, akun itu yang di-upgrade.
+	u = userDTO{Email: email, Name: name, Role: RoleUser}
+	if s.isAdminEmail(email) {
+		u.Role = RoleAdmin
+	}
+	if guestID := s.optionalUserID(r); guestID != "" {
+		res, err := s.DB.ExecContext(ctx,
+			`UPDATE users SET email=$2, name=$3, password_hash='', google_sub=$4, is_guest=false, role=$5 WHERE id=$1 AND is_guest`,
+			guestID, u.Email, u.Name, g.Sub, u.Role)
+		if err != nil && !isUniqueViolation(err) {
+			httpx.Error(w, 500, err.Error())
+			return
+		}
+		if n, _ := rowsAffected(res); err == nil && n > 0 {
+			u.ID = guestID
+			activity(r, "upgraded_guest", true)
+			_ = s.DB.QueryRowContext(ctx, `SELECT balance FROM users WHERE id=$1`, u.ID).Scan(&u.Balance)
+			s.issue(w, r, 200, u)
+			return
+		}
+	}
+	err = s.DB.QueryRowContext(ctx,
+		`INSERT INTO users(email, name, password_hash, google_sub, role) VALUES($1,$2,'',$3,$4) RETURNING id`,
+		u.Email, u.Name, g.Sub, u.Role).Scan(&u.ID)
+	if isUniqueViolation(err) {
+		// Dua request bersamaan untuk akun yang sama; request lain sudah membuat akunnya.
+		httpx.Error(w, 409, "akun sedang dibuat, silakan coba lagi")
+		return
+	}
+	if err != nil {
+		httpx.Error(w, 500, err.Error())
+		return
+	}
+	s.issue(w, r, 201, u)
+}
+
+// optionalUserID membaca user dari header Authorization tanpa mewajibkannya (endpoint publik
+// yang perilakunya berbeda kalau user sudah punya sesi, mis. akun tamu).
+func (s *Server) optionalUserID(r *http.Request) string {
+	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if !ok || token == "" {
+		return ""
+	}
+	c, err := auth.Verify(s.Cfg.JWTSecret, token)
+	if err != nil {
+		return ""
+	}
+	return c.Sub
 }

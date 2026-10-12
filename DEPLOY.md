@@ -84,6 +84,7 @@ Isi minimal `.env` untuk production:
 | `CORS_ORIGINS` | `https://racik.katili.dev` (ganti sesuai subdomain) |
 | `PUBLIC_URL` | biarkan kosong (file upload dilayani relatif lewat proxy Nuxt) |
 | `ADMIN_EMAILS` / `ADMIN_PASSWORD` | email admin + password awal (ganti setelah login pertama) |
+| `GOOGLE_CLIENT_ID` | opsional — OAuth Client ID untuk login Google; tambahkan `https://racik.katili.dev` di *Authorized JavaScript origins* (lihat README → Login Google) |
 | `KENARI_API_KEY` | API key kenari.id (atau key provider lain) |
 | `ES_JAVA_OPTS` | `-Xms512m -Xmx512m` (turunkan kalau RAM mepet) |
 
