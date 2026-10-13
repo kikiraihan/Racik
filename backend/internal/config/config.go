@@ -118,7 +118,7 @@ func Load() Config {
 	}
 	c.Nvidia = Provider{
 		APIKey:      env("NVIDIA_API_KEY", ""),
-		TextModels:  list(env("NVIDIA_TEXT_MODELS", "meta/llama-3.3-70b-instruct,deepseek-ai/deepseek-v4-flash,qwen/qwen3-next-80b-a3b-instruct")),
+		TextModels:  list(env("NVIDIA_TEXT_MODELS", "nvidia/nemotron-3-super-120b-a12b,openai/gpt-oss-20b,nvidia/nemotron-3.5-lightning-30b-a3b")),
 		ImageModels: list(env("NVIDIA_IMAGE_MODELS", "black-forest-labs/flux.2-klein-4b,black-forest-labs/flux.1-dev")),
 	}
 	c.NvidiaImageSteps = envInt("NVIDIA_IMAGE_STEPS", 4)

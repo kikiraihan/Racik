@@ -42,7 +42,7 @@ type Provider struct {
 }
 
 // Router memilih provider berdasarkan id pilihan "<provider>:<model>". Hanya awalan
-// sampai ":" pertama yang dibuang — id kenari sendiri bisa memuat ":" (step-3-7-flash:free).
+// sampai ":" pertama yang dibuang — id kenari sendiri bisa memuat ":" (step-5-preview:free).
 type Router struct {
 	providers map[string]*Provider
 	order     []string
