@@ -3,6 +3,7 @@
 // halaman & pengganti tema (terang/gelap/sistem). Tampilannya sengaja berbeda dari halaman
 // public: sidebar gelap, tanpa AppHeader, dan punya mode gelap sendiri.
 import { rupiah } from '~/composables/useApi'
+import { ADMIN_NAV } from '~/composables/useMenu'
 
 const api = useApi()
 const session = useSession()
@@ -15,29 +16,8 @@ const collapsed = ref(false)
 const mobileOpen = ref(false)
 const themeMenu = ref(false)
 
-const NAV = [
-  {
-    label: 'Menu',
-    items: [
-      { to: '/admin', text: 'Ringkasan', icon: 'home', exact: true },
-      { to: '/admin/users', text: 'Pengguna & saldo', icon: 'users' },
-    ],
-  },
-  {
-    label: 'Konfigurasi',
-    items: [
-      { to: '/admin/ai', text: 'Konfigurasi AI', icon: 'sparkles' },
-      { to: '/admin/pricing', text: 'Konfigurasi harga', icon: 'wallet' },
-    ],
-  },
-  {
-    label: 'Monitoring',
-    items: [
-      { to: '/admin/logs', text: 'System log', icon: 'activity' },
-      { to: '/admin/server-log', text: 'Log server', icon: 'terminal' },
-    ],
-  },
-]
+// Menu sidebar: menu khusus admin, didefinisikan di composables/useMenu.ts (dipakai juga oleh AppHeader).
+const NAV = ADMIN_NAV
 
 const THEMES = [
   { key: 'light', text: 'Terang', icon: 'sun' },
