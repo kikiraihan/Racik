@@ -199,7 +199,7 @@ huggingface, pollinations.
 | kenari | `KENARI_API_KEY` | ✔ | ✔ | ✔ | cadangan teks `nemotron-3-super-120b-a12b:free` (juga saat saldo habis), gambar `nano-banana-2-lite` |
 | Anthropic | `ANTHROPIC_API_KEY` | ✔ | – | – | SDK resmi; `ANTHROPIC_EFFORT` (default `medium`); Sonnet/Opus 5.5 memakai server-side fallback saat permintaan ditolak |
 | Groq | `GROQ_API_KEY` | ✔ | – | – | GPT-OSS dengan `reasoning_effort: low`; model yang dicabut → `openai/gpt-oss-120b` |
-| NVIDIA NIM | `NVIDIA_API_KEY` | ✔ | ✔ | – | teks `integrate.api.nvidia.com`, gambar endpoint GenAI (FLUX.2/FLUX.1/SD3, ukuran kelipatan 64, prompt ≤ 800 karakter, polling 202/NVCF); cadangan model default |
+| NVIDIA NIM | `NVIDIA_API_KEY` | ✔ | ✔ | – | teks `integrate.api.nvidia.com`, gambar endpoint GenAI (FLUX.2/FLUX.1/SD3, ukuran kelipatan 64, prompt ≤ 800 karakter, polling 202/NVCF); GPT-OSS dengan `reasoning_effort: low`; cadangan teks `nvidia/nemotron-3-super-120b-a12b` |
 | Agnes AI | `AGNES_API_KEY` | ✔ | ✔ | – | gambar diminta `size: 1K` + rasio terdekat; cadangan model 2.x |
 | OpenRouter | `OPENROUTER_API_KEY` | ✔* | ✔ | ✔ | gambar & edit lewat chat completions (`modalities`); *isi `OPENROUTER_TEXT_MODELS` untuk teks |
 | Hugging Face | `HUGGINGFACE_API_KEY` | – | ✔ | – | Inference API (`router.huggingface.co`); 503 = model sedang dimuat |

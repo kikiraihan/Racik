@@ -24,7 +24,7 @@ func New(baseURL, apiKey string, timeout time.Duration) *Client {
 	c.ChatExtra = func(model string) map[string]any {
 		switch model {
 		// Model reasoning yang mode berpikirnya tidak bisa dimatikan — dikecilkan saja.
-		case "step-3-7-flash:free", "step-3-7-flash", "gpt-oss-120b":
+		case "step-3-7-flash:free", "step-3-7-flash", "step-5-preview:free", "gpt-oss-120b":
 			return map[string]any{"reasoning_effort": "low"}
 		}
 		return nil

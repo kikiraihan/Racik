@@ -15,7 +15,7 @@ const (
 	OpenRouterBaseURL = "https://openrouter.ai/api/v1"
 
 	GroqTextDefault    = "openai/gpt-oss-120b"
-	NvidiaTextDefault  = "meta/llama-3.3-70b-instruct"
+	NvidiaTextDefault  = "nvidia/nemotron-3-super-120b-a12b"
 	AgnesTextFallback  = "agnes-2.5-flash"
 	AgnesImageFallback = "agnes-image-2.1-flash"
 )
@@ -37,11 +37,11 @@ func NewGroq(apiKey string, timeout time.Duration) *Client {
 
 // nvidiaTextExtra: field per model untuk mematikan mode berpikir (katilidev NVIDIA_TEXT).
 var nvidiaTextExtra = map[string]map[string]any{
-	"nvidia/nemotron-3-super-120b-a12b": {"chat_template_kwargs": map[string]any{"enable_thinking": false}},
-	"deepseek-ai/deepseek-v3.2":         {"chat_template_kwargs": map[string]any{"enable_thinking": false}},
-	"deepseek-ai/deepseek-v4-flash":     {"chat_template_kwargs": map[string]any{"thinking": false}},
-	"qwen/qwen3.5-122b-a10b":            {"chat_template_kwargs": map[string]any{"enable_thinking": false}},
-	"google/gemma-4-31b-it":             {"chat_template_kwargs": map[string]any{"enable_thinking": false}},
+	"nvidia/nemotron-3-super-120b-a12b":     {"chat_template_kwargs": map[string]any{"enable_thinking": false}},
+	"nvidia/nemotron-3.5-lightning-30b-a3b": {"chat_template_kwargs": map[string]any{"enable_thinking": false}},
+	"deepseek-ai/deepseek-v3.2":             {"chat_template_kwargs": map[string]any{"enable_thinking": false}},
+	"qwen/qwen3.5-122b-a10b":                {"chat_template_kwargs": map[string]any{"enable_thinking": false}},
+	"google/gemma-4-31b-it":                 {"chat_template_kwargs": map[string]any{"enable_thinking": false}},
 }
 
 // NewNvidiaText: teks lewat endpoint OpenAI-compatible integrate.api.nvidia.com.
@@ -49,7 +49,13 @@ var nvidiaTextExtra = map[string]map[string]any{
 func NewNvidiaText(apiKey string, timeout time.Duration) *Client {
 	c := NewOpenAI("nvidia", NvidiaTextBaseURL, apiKey, timeout)
 	c.TextFallback = NvidiaTextDefault
-	c.ChatExtra = func(model string) map[string]any { return nvidiaTextExtra[model] }
+	c.ChatExtra = func(model string) map[string]any {
+		// GPT-OSS tidak bisa mematikan reasoning — dikecilkan seperti di NewGroq.
+		if strings.HasPrefix(model, "openai/gpt-oss") {
+			return map[string]any{"reasoning_effort": "low"}
+		}
+		return nvidiaTextExtra[model]
+	}
 	c.PrepareMessages = func(model string, msgs []Message) []Message {
 		// Nemotron Super 49B mematikan mode berpikir lewat baris "/no_think" di pesan system.
 		if model == "nvidia/llama-3.3-nemotron-super-49b-v1.5" {

@@ -71,6 +71,20 @@ func TestNvidiaTextPrepare(t *testing.T) {
 	}
 }
 
+func TestNvidiaTextExtra(t *testing.T) {
+	c := NewNvidiaText("k", time.Second)
+	if e := c.ChatExtra("openai/gpt-oss-20b"); e["reasoning_effort"] != "low" {
+		t.Fatalf("gpt-oss: %v", e)
+	}
+	kw, _ := c.ChatExtra("nvidia/nemotron-3.5-lightning-30b-a3b")["chat_template_kwargs"].(map[string]any)
+	if kw["enable_thinking"] != false {
+		t.Fatalf("lightning: %v", kw)
+	}
+	if c.ChatExtra("model/lain") != nil {
+		t.Fatal("model tanpa extra harus nil")
+	}
+}
+
 func TestNvidiaImage(t *testing.T) {
 	b64 := base64.StdEncoding.EncodeToString(pngBytes)
 	rec := newRecorder()
