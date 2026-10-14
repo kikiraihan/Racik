@@ -105,6 +105,16 @@ onMounted(async () => {
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('paste', onPaste)
   window.addEventListener('beforeunload', onUnload)
+  const ws = workspace.value
+  if (ws) {
+    const opt = { capture: true, passive: false }
+    ws.addEventListener('touchstart', onTouchStart, opt)
+    ws.addEventListener('touchmove', onTouchMove, opt)
+    ws.addEventListener('touchend', onTouchEnd, opt)
+    ws.addEventListener('touchcancel', onTouchEnd, opt)
+    ws.addEventListener('gesturestart', onGestureStart)
+    ws.addEventListener('gesturechange', onGestureChange)
+  }
 })
 
 onBeforeUnmount(() => {
@@ -115,6 +125,16 @@ onBeforeUnmount(() => {
   window.removeEventListener('pointerup', onPointerUp)
   window.removeEventListener('paste', onPaste)
   window.removeEventListener('beforeunload', onUnload)
+  const ws = workspace.value
+  if (ws) {
+    ws.removeEventListener('touchstart', onTouchStart, true)
+    ws.removeEventListener('touchmove', onTouchMove, true)
+    ws.removeEventListener('touchend', onTouchEnd, true)
+    ws.removeEventListener('touchcancel', onTouchEnd, true)
+    ws.removeEventListener('gesturestart', onGestureStart)
+    ws.removeEventListener('gesturechange', onGestureChange)
+  }
+  cancelAnimationFrame(pinchRaf)
   ro?.disconnect()
   editor.dispose()
 })
@@ -212,6 +232,7 @@ function zoomAt(z: number, cx?: number, cy?: number) {
 let drag: { kind: 'pan' | 'page'; i: number; sx: number; sy: number; ox: number; oy: number; moved: boolean } | null = null
 function onBoardDown(e: PointerEvent) {
   ctxMenu.open = false
+  if (gesture) return // sedang pinch dua jari
   const onEmpty = e.target === workspace.value
   if (!(e.button === 1 || (e.button === 0 && (handMode.value || onEmpty)))) return
   e.preventDefault()
@@ -387,6 +408,126 @@ function onWheel(e: WheelEvent) {
     pan.y -= e.shiftKey && !e.deltaX ? 0 : e.deltaY
     autoFit.value = false
   }
+}
+
+// ---------- pinch dua jari (layar sentuh) = zoom + geser board ----------
+// Didengarkan di fase capture agar mendahului fabric: begitu jari kedua menyentuh,
+// interaksi objek dari jari pertama dibatalkan dan gerakan diambil alih untuk zoom/geser.
+let gesture = false // aktif sejak dua jari menyentuh sampai semua jari diangkat
+let pinch: { d: number; z: number; mx: number; my: number; px: number; py: number } | null = null
+let solo: { x: number; y: number } | null = null // sisa satu jari setelah pinch = geser board
+let lastTouches: TouchList | null = null
+let pinchRaf = 0
+
+function touchPoint(t: TouchList) {
+  const r = workspace.value!.getBoundingClientRect()
+  const a = t[0]
+  const b = t[1]
+  if (!b) return { d: 0, x: a.clientX - r.left, y: a.clientY - r.top }
+  return {
+    d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+    x: (a.clientX + b.clientX) / 2 - r.left,
+    y: (a.clientY + b.clientY) / 2 - r.top,
+  }
+}
+function startPinch(t: TouchList) {
+  const p = touchPoint(t)
+  pinch = { d: Math.max(p.d, 1), z: st.zoom, mx: p.x, my: p.y, px: pan.x, py: pan.y }
+  solo = null
+}
+function startSolo(t: TouchList) {
+  const p = touchPoint(t)
+  pinch = null
+  solo = { x: p.x, y: p.y }
+}
+/** Hentikan seret objek / kotak seleksi / goresan kuas / geser board yang dimulai jari pertama. */
+function cancelSingleTouch() {
+  const c: any = editor.canvas
+  const tr = c?._currentTransform
+  if (tr?.target && tr.original) {
+    // kembalikan objek ke posisi sebelum sempat tergeser jari pertama
+    tr.target.set(tr.original)
+    tr.target.setCoords()
+  }
+  if (c) {
+    c._currentTransform = null
+    c._groupSelector = null
+    c._isClick = false
+    if (c._isCurrentlyDrawing) {
+      c._isCurrentlyDrawing = false
+      c.clearContext(c.contextTop)
+    }
+    c.requestRenderAll()
+  }
+  drag = null
+  pageDrag.value = null
+  panning.value = false
+  window.removeEventListener('pointermove', onPointerMove)
+  window.removeEventListener('pointerup', onPointerUp)
+}
+function onTouchStart(e: TouchEvent) {
+  if (!ready.value) return
+  if (e.touches.length < 2 && !gesture) return // satu jari: biarkan fabric / geser board biasa
+  e.preventDefault()
+  e.stopPropagation() // jangan sampai fabric menganggap jari kedua sebagai klik/goresan baru
+  if (!gesture) {
+    gesture = true
+    cancelSingleTouch()
+  }
+  if (e.touches.length >= 2) startPinch(e.touches)
+  else startSolo(e.touches)
+}
+function onTouchMove(e: TouchEvent) {
+  if (!gesture) return
+  e.preventDefault()
+  e.stopPropagation() // fabric mendengarkan touchmove di document
+  lastTouches = e.touches
+  if (!pinchRaf) pinchRaf = requestAnimationFrame(applyTouch)
+}
+function applyTouch() {
+  pinchRaf = 0
+  const t = lastTouches
+  if (!t || !t.length || !workspace.value) return
+  const p = touchPoint(t)
+  if (pinch && t.length >= 2) {
+    editor.setZoom(pinch.z * (p.d / pinch.d))
+    const k = st.zoom / pinch.z
+    // titik di bawah tengah dua jari ikut berpindah bersama jari
+    pan.x = p.x - (pinch.mx - pinch.px) * k
+    pan.y = p.y - (pinch.my - pinch.py) * k
+  } else if (solo) {
+    pan.x += p.x - solo.x
+    pan.y += p.y - solo.y
+    solo = { x: p.x, y: p.y }
+  }
+  autoFit.value = false
+}
+function onTouchEnd(e: TouchEvent) {
+  if (!gesture) return
+  if (e.touches.length >= 2) return startPinch(e.touches)
+  if (e.touches.length === 1) {
+    e.stopPropagation()
+    return startSolo(e.touches)
+  }
+  // semua jari diangkat: biarkan event diteruskan agar fabric membereskan state sentuhnya
+  gesture = false
+  pinch = solo = null
+  lastTouches = null
+  cancelAnimationFrame(pinchRaf)
+  pinchRaf = 0
+}
+
+// Safari macOS: pinch trackpad dikirim sebagai gesture event (bukan Ctrl+scroll).
+let gestureZoom = 1
+function onGestureStart(e: any) {
+  e.preventDefault()
+  gestureZoom = st.zoom
+}
+function onGestureChange(e: any) {
+  e.preventDefault()
+  if (gesture || !workspace.value) return // di iOS sudah ditangani lewat touch event
+  const r = workspace.value.getBoundingClientRect()
+  zoomAt(gestureZoom * e.scale, e.clientX - r.left, e.clientY - r.top)
 }
 
 function openTab(t: string) {
