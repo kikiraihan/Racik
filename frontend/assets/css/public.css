@@ -1,0 +1,97 @@
+/* Gaya halaman public & user (semua selain panel admin dan editor).
+   Prinsip: layout rapi ala dashboard Canva (sidebar + konten), tampilan sederhana ala Gumloop
+   (monokrom, garis tipis, tanpa gradasi & bayangan tebal). Token Racik ditimpa hanya di dalam
+   .pub, jadi panel admin & editor tidak ikut berubah. */
+.pub {
+  --bg: #fafafa;
+  --panel: #ffffff;
+  --panel-2: #f4f4f5;
+  --panel-3: #ececee;
+  --ink: #18181b;
+  --ink-2: #3f3f46;
+  --muted: #71717a;
+  --line: #e4e4e7;
+  --line-2: #d4d4d8;
+  --accent: #18181b;
+  --accent-soft: #f4f4f5;
+  --link: #2563eb;
+  --radius: 8px;
+  --shadow: 0 1px 2px rgba(24, 24, 27, .04);
+  --shadow-lg: 0 12px 32px rgba(24, 24, 27, .12);
+  --grad: #18181b;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100%;
+}
+
+/* Tombol & input versi sederhana */
+.pub .btn { height: 34px; border-radius: 8px; font-weight: 500; border-color: var(--line); }
+.pub .btn:hover { background: var(--panel-2); }
+.pub .btn.primary, .pub .btn.grad { background: var(--ink); border: 1px solid var(--ink); color: #fff; filter: none; }
+.pub .btn.primary:hover, .pub .btn.grad:hover { background: #27272a; }
+.pub .btn.ghost:hover { background: var(--panel-2); }
+.pub .btn.active { background: var(--panel-2); border-color: var(--line-2); color: var(--ink); }
+.pub .btn.sm { height: 30px; }
+.pub .input, .pub .select, .pub .textarea { border-radius: 8px; border-color: var(--line); }
+.pub .input:focus, .pub .select:focus, .pub .textarea:focus { border-color: var(--ink-2); box-shadow: 0 0 0 3px rgba(24, 24, 27, .08); }
+.pub .label { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+.pub .chip { height: 30px; border-color: var(--line); font-weight: 500; color: var(--ink-2); }
+.pub .chip:hover { background: var(--panel-2); border-color: var(--line); }
+.pub .chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.pub .card { border-radius: 10px; box-shadow: none; }
+.pub .badge { background: var(--panel-2); color: var(--ink-2); font-weight: 600; border: 1px solid var(--line); }
+.pub .popover { border-radius: 10px; box-shadow: var(--shadow-lg); padding: 6px; }
+.pub .menu-item { color: var(--ink); text-decoration: none; }
+.pub .modal { border-radius: 14px; }
+.pub .lnk { color: var(--link); font-weight: 500; }
+.pub .lnk:hover { text-decoration: underline; }
+.pub input[type='range'] { accent-color: var(--ink); }
+
+/* Kerangka halaman: judul, deskripsi, aksi di kanan (seperti header halaman Gumloop) */
+.pub .page { max-width: 1180px; margin: 0 auto; padding: 32px 32px 64px; }
+.pub .page.narrow { max-width: 820px; }
+.pub .page-head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+.pub .page-head h1 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
+.pub .page-head p { margin: 6px 0 0; color: var(--muted); line-height: 1.5; }
+.pub .sec-head { display: flex; align-items: center; gap: 12px; margin: 36px 0 14px; }
+.pub .sec-head h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.01em; flex: 1; }
+.pub .see-all { color: var(--ink-2); font-weight: 500; font-size: 14px; }
+.pub .see-all:hover { color: var(--ink); text-decoration: underline; }
+.pub .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 18px; }
+
+/* Segmented control (mis. "Semua | Berbintang", "Grid | Daftar") */
+.pub .seg { display: inline-flex; padding: 3px; background: var(--panel-2); border-radius: 8px; gap: 2px; }
+.pub .seg button { height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; color: var(--muted); font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+.pub .seg button.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .08); }
+.pub .seg.icons button { padding: 0 8px; }
+
+/* Kotak pencarian dengan ikon */
+.pub .search { position: relative; flex: 1; min-width: 180px; }
+.pub .search .input { padding-left: 34px; height: 36px; }
+.pub .search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+
+/* Panel berbingkai berisi baris pengaturan (halaman Brand Kit / Saldo) */
+.pub .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.pub .panel + .panel { margin-top: 16px; }
+.pub .prow { display: grid; grid-template-columns: 220px 1fr; gap: 24px; padding: 20px; border-top: 1px solid var(--line); }
+.pub .prow:first-child { border-top: 0; }
+.pub .prow-title { font-weight: 500; }
+.pub .prow-desc { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 4px; }
+
+/* Grid kartu desain & masonry template (seperti Canva) */
+.pub .dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+.pub .masonry { columns: 5 200px; column-gap: 16px; }
+.pub .masonry > * { break-inside: avoid; margin-bottom: 16px; }
+
+.pub .empty { padding: 40px 20px; border: 1px dashed var(--line-2); border-radius: 10px; text-align: center; color: var(--muted); }
+.pub .empty b { display: block; color: var(--ink); margin-bottom: 4px; font-weight: 600; }
+.pub .small { font-size: 12px; }
+
+@media (max-width: 720px) {
+  .pub .page { padding: 20px 16px 96px; }
+  .pub .page-head { flex-wrap: wrap; }
+  .pub .page-head h1 { font-size: 22px; }
+  .pub .prow { grid-template-columns: 1fr; gap: 10px; }
+  .pub .masonry { columns: 2 140px; column-gap: 12px; }
+  .pub .dgrid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+}

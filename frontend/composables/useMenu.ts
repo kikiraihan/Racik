@@ -1,4 +1,4 @@
-// Menu navigasi per role. Satu sumber untuk header situs (AppHeader) dan sidebar panel admin,
+// Menu navigasi per role. Satu sumber untuk sidebar situs (AppSidebar) dan sidebar panel admin,
 // supaya admin, user biasa, tamu, dan pengunjung yang belum masuk punya menu masing-masing.
 import type { User } from '~/composables/useApi'
 
@@ -16,7 +16,7 @@ export interface MenuGroup {
   items: MenuItem[]
 }
 
-/** Menu khusus admin: dipakai sidebar layout admin & dropdown "Admin" di header. */
+/** Menu khusus admin: dipakai sidebar layout admin & grup "Admin" di sidebar situs. */
 export const ADMIN_NAV: MenuGroup[] = [
   {
     label: 'Menu',
@@ -42,18 +42,20 @@ export const ADMIN_NAV: MenuGroup[] = [
 ]
 
 const HOME: MenuItem = { to: '/', text: 'Beranda', icon: 'home', exact: true }
+const DESIGNS: MenuItem = { to: '/designs', text: 'Desain saya', icon: 'grid' }
+const TEMPLATES: MenuItem = { to: '/templates', text: 'Template', icon: 'template' }
 const BRAND: MenuItem = { to: '/brand', text: 'Brand Kit', icon: 'brand' }
 const WALLET: MenuItem = { to: '/wallet', text: 'Saldo', icon: 'wallet' }
 
-/** Menu utama di header, per role. */
+/** Menu utama di sidebar situs, per role. */
 const MAIN_NAV: Record<MenuRole, MenuItem[]> = {
-  anon: [HOME],
-  guest: [HOME, BRAND],
-  user: [HOME, BRAND, WALLET],
-  admin: [HOME, BRAND, WALLET],
+  anon: [HOME, TEMPLATES],
+  guest: [HOME, DESIGNS, TEMPLATES, BRAND],
+  user: [HOME, DESIGNS, TEMPLATES, BRAND, WALLET],
+  admin: [HOME, DESIGNS, TEMPLATES, BRAND, WALLET],
 }
 
-/** Isi dropdown akun di header, per role (tamu & pengunjung tidak punya dropdown akun). */
+/** Isi dropdown akun di sidebar situs, per role (tamu & pengunjung tidak punya dropdown akun). */
 const ACCOUNT_NAV: Record<MenuRole, MenuItem[]> = {
   anon: [],
   guest: [],
