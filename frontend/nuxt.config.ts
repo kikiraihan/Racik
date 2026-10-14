@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-01',
   ssr: false,
   devtools: { enabled: false },
-  css: ['~/assets/css/main.css', '~/assets/css/admin.css'],
+  css: ['~/assets/css/main.css', '~/assets/css/admin.css', '~/assets/css/public.css'],
   app: {
     head: {
       title: 'Racik — Desain cepat dengan AI',

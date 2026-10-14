@@ -38,7 +38,7 @@ function renderGoogleButton() {
     type: 'standard',
     theme: 'outline',
     size: 'large',
-    shape: 'pill',
+    shape: 'rectangular',
     text: mode.value === 'login' ? 'signin_with' : 'signup_with',
     logo_alignment: 'center',
     width: Math.min(googleBtn.value.clientWidth || 344, 400),
@@ -107,12 +107,19 @@ async function submit() {
 </script>
 
 <template>
-  <div>
-    <AppHeader />
+  <div class="pub auth-page">
+    <header class="top">
+      <NuxtLink to="/" class="logo"><span class="mark">R</span> Racik</NuxtLink>
+      <div class="grow" />
+      <NuxtLink to="/" class="btn ghost sm"><Icon name="left" :size="16" /> Kembali</NuxtLink>
+    </header>
     <div class="center">
-      <form class="card box" @submit.prevent="submit">
-        <h2>{{ mode === 'login' ? 'Masuk ke Racik' : isGuest ? 'Simpan akun tamu kamu' : 'Buat akun Racik' }}</h2>
-        <p v-if="isGuest && mode === 'register'" class="muted">Semua desain yang kamu buat sebagai tamu akan tetap tersimpan.</p>
+      <form class="box" @submit.prevent="submit">
+        <div class="head">
+          <h1>{{ mode === 'login' ? 'Masuk ke Racik' : isGuest ? 'Simpan akun tamu kamu' : 'Buat akun Racik' }}</h1>
+          <p v-if="isGuest && mode === 'register'" class="muted">Semua desain yang kamu buat sebagai tamu akan tetap tersimpan.</p>
+          <p v-else class="muted">{{ mode === 'login' ? 'Lanjutkan desainmu yang tersimpan.' : 'Gratis, desainmu tersimpan di akun.' }}</p>
+        </div>
         <template v-if="googleClientId">
           <div ref="googleBtn" class="google-btn" />
           <div class="divider"><span>atau dengan email</span></div>
@@ -120,7 +127,7 @@ async function submit() {
         <label v-if="mode === 'register'"><span class="label">Nama</span><input v-model="form.name" class="input" autocomplete="name" /></label>
         <label><span class="label">Email</span><input v-model="form.email" type="email" class="input" required autocomplete="email" /></label>
         <label><span class="label">Password</span><input v-model="form.password" type="password" class="input" required minlength="8" :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" /></label>
-        <button class="btn primary" style="height: 42px" :disabled="loading"><span v-if="loading" class="spin" />{{ mode === 'login' ? 'Masuk' : 'Daftar' }}</button>
+        <button class="btn primary" style="height: 40px" :disabled="loading"><span v-if="loading" class="spin" />{{ mode === 'login' ? 'Masuk' : 'Daftar' }}</button>
         <p class="muted" style="text-align: center; margin: 4px 0 0">
           <template v-if="mode === 'login'">Belum punya akun? <a href="#" @click.prevent="mode = 'register'" class="lnk">Daftar</a></template>
           <template v-else>Sudah punya akun? <a href="#" @click.prevent="mode = 'login'" class="lnk">Masuk</a></template>
@@ -131,11 +138,17 @@ async function submit() {
 </template>
 
 <style scoped>
-.center { display: grid; place-items: center; padding: 60px 16px; }
-.box { width: min(400px, 100%); padding: 28px; display: flex; flex-direction: column; gap: 14px; }
-h2 { margin: 0; }
-.lnk { color: var(--accent); font-weight: 600; }
+.auth-page { min-height: 100vh; display: flex; flex-direction: column; }
+.top { display: flex; align-items: center; height: 60px; padding: 0 24px; }
+.logo { font-weight: 700; font-size: 18px; display: inline-flex; align-items: center; gap: 8px; letter-spacing: -.02em; }
+.mark { width: 26px; height: 26px; border-radius: 7px; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 14px; }
+.center { flex: 1; display: grid; place-items: center; padding: 24px 16px 80px; }
+.box { width: min(400px, 100%); padding: 28px; display: flex; flex-direction: column; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.head h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
+.head p { margin: 6px 0 0; line-height: 1.5; }
+label .label { margin-bottom: 6px; }
 .google-btn { display: flex; justify-content: center; min-height: 44px; }
 .divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
 .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+@media (max-width: 480px) { .top { padding: 0 16px; } .box { padding: 22px 18px; border: 0; background: transparent; } }
 </style>

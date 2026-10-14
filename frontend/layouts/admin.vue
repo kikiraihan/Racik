@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Layout panel admin: sidebar (bisa diciutkan / jadi drawer di mobile), topbar dengan judul
 // halaman & pengganti tema (terang/gelap/sistem). Tampilannya sengaja berbeda dari halaman
-// public: sidebar gelap, tanpa AppHeader, dan punya mode gelap sendiri.
+// public: sidebar gelap, tanpa AppSidebar, dan punya mode gelap sendiri.
 import { rupiah } from '~/composables/useApi'
 import { ADMIN_NAV } from '~/composables/useMenu'
 
@@ -16,7 +16,7 @@ const collapsed = ref(false)
 const mobileOpen = ref(false)
 const themeMenu = ref(false)
 
-// Menu sidebar: menu khusus admin, didefinisikan di composables/useMenu.ts (dipakai juga oleh AppHeader).
+// Menu sidebar: menu khusus admin, didefinisikan di composables/useMenu.ts (dipakai juga oleh AppSidebar).
 const NAV = ADMIN_NAV
 
 const THEMES = [
