@@ -65,9 +65,9 @@ const icons = computed(() => Object.entries(GRAPHIC_ICONS).filter(([k]) => !q.va
 <style scoped>
 .g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .cell { aspect-ratio: 1; border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px; cursor: pointer; display: grid; place-items: center; padding: 12px; }
-.cell:hover { border-color: var(--accent); background: #fff; }
+.cell:hover { border-color: var(--line-2); background: var(--panel); }
 .cell svg { width: 100%; height: 100%; }
-.fr { width: 100%; aspect-ratio: 4/3; background: #E9E3F7; border: 2px dashed #B79CF0; }
+.fr { width: 100%; aspect-ratio: 4/3; background: #e4e4e7; border: 2px dashed #a1a1aa; }
 .em { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .em button { font-size: 22px; border: 0; background: none; cursor: pointer; border-radius: 8px; padding: 4px 0; }
 .em button:hover { background: var(--panel-2); }

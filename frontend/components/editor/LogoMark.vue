@@ -1,18 +1,12 @@
 <script setup lang="ts">
-// Logo Racik (berlian bergradien) untuk sidebar & pil sidebar tertutup.
+// Logo Racik untuk sidebar & pil sidebar tertutup — kotak hitam berhuruf "R", sama dengan logo di halaman awal.
 withDefaults(defineProps<{ size?: number }>(), { size: 28 })
 </script>
 
 <template>
-  <svg :width="size" :height="size" viewBox="0 0 32 32" aria-hidden="true">
-    <defs>
-      <linearGradient id="racik-lg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#a66bff" />
-        <stop offset="1" stop-color="#6a1fe0" />
-      </linearGradient>
-    </defs>
-    <path d="M16 2l14 14-14 14L2 16z" fill="url(#racik-lg)" />
-    <path d="M16 2v28M2 16h28" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" />
-    <path d="M16 9l7 7-7 7-7-7z" fill="#fff" fill-opacity=".28" />
-  </svg>
+  <span class="mark" :style="{ width: `${size}px`, height: `${size}px`, fontSize: `${Math.round(size * .54)}px`, borderRadius: `${Math.round(size * .27)}px` }" aria-hidden="true">R</span>
 </template>
+
+<style scoped>
+.mark { background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 700; flex: 0 0 auto; }
+</style>

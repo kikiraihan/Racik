@@ -50,7 +50,7 @@ const time = (t: number) => new Date(t).toLocaleTimeString('id-ID', { hour: '2-d
     <div class="body scroll">
       <!-- Riwayat instruksi AI dari kotak chat -->
       <template v-if="props.tab === 'history'">
-        <p v-if="!turns.length" class="muted empty">Belum ada riwayat. Tulis instruksi di kotak bawah untuk memulai.</p>
+        <p v-if="!turns.length" class="muted kosong">Belum ada riwayat. Tulis instruksi di kotak bawah untuk memulai.</p>
         <div v-for="t in [...turns].reverse()" :key="t.id" class="turn" :class="t.status">
           <div class="row th"><span class="badge">{{ MODE[t.mode] }}</span><span class="grow" /><span class="muted small">{{ time(t.at) }}</span></div>
           <p class="pr">{{ t.prompt }}</p>
@@ -60,7 +60,7 @@ const time = (t: number) => new Date(t).toLocaleTimeString('id-ID', { hour: '2-d
       <!-- Properti objek terpilih -->
       <template v-else>
         <EditorPropsPanel v-if="st.sel.kind !== 'none'" @close="emit('update:tab', 'history')" />
-        <p v-else class="muted empty">Pilih elemen di kanvas untuk melihat posisi, ukuran, bayangan, dan filter.</p>
+        <p v-else class="muted kosong">Pilih elemen di kanvas untuk melihat posisi, ukuran, bayangan, dan filter.</p>
       </template>
     </div>
 
@@ -84,27 +84,27 @@ const time = (t: number) => new Date(t).toLocaleTimeString('id-ID', { hour: '2-d
 </template>
 
 <style scoped>
-.rs { width: 100%; height: 100%; display: flex; flex-direction: column; background: #fff; border-left: 1px solid var(--line); }
+.rs { width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--line); }
 .hd { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; }
 .me { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
-.av { width: 38px; height: 38px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 700; flex: 0 0 38px; }
+.av { width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 600; font-size: 13px; flex: 0 0 32px; }
 .nm { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ib { border: 0; background: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); flex: 0 0 auto; }
+.ib { border: 0; background: none; width: 34px; height: 34px; border-radius: 7px; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); flex: 0 0 auto; }
 .ib:hover:not(:disabled) { background: var(--panel-2); color: var(--ink); }
 .ib:disabled { opacity: .35; cursor: default; }
 .ib.sm { width: 30px; height: 30px; }
 .pad { padding: 4px 16px 0; }
-.exp { width: 100%; height: 48px; border-radius: 12px; font-size: 16px; box-shadow: 0 0 0 3px var(--accent-soft); }
+.exp { width: 100%; height: 40px; border-radius: 8px; font-size: 14px; }
 .acts { display: flex; align-items: center; gap: 2px; margin: 10px 0 8px; }
 .status { font-size: 12px; color: var(--muted); padding-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.seg { background: #f1f0f7; border-radius: 12px; padding: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.seg button { border: 0; background: none; height: 38px; border-radius: 9px; cursor: pointer; font-weight: 600; color: var(--muted); }
-.seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(16,24,40,.1); }
+.seg { background: var(--panel-2); border-radius: 8px; padding: 3px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.seg button { border: 0; background: none; height: 30px; border-radius: 6px; cursor: pointer; font-weight: 500; color: var(--muted); }
+.seg button.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 .body { flex: 1; min-height: 0; padding: 8px 16px; }
 .body :deep(.pp) { padding: 0; }
 .body :deep(.pp .hd) { padding-top: 4px; }
-.empty { font-size: 14px; line-height: 1.5; margin: 12px 2px; }
-.turn { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+.kosong { font-size: 14px; line-height: 1.5; margin: 12px 2px; }
+.turn { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
 .turn.error { border-color: #f5c2c4; background: #fff7f7; }
 .turn.ok .msg { color: var(--ok); }
 .turn.error .msg { color: var(--danger); }
@@ -114,15 +114,16 @@ const time = (t: number) => new Date(t).toLocaleTimeString('id-ID', { hour: '2-d
 .small { font-size: 12px; }
 .foot { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
 .foot :deep(.fb) { position: static; width: auto; box-shadow: none; }
-.tip { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
-.art { background: #f4f2fb; display: flex; justify-content: center; gap: 8px; padding: 16px 10px; }
-.ti { width: 40px; height: 40px; border-radius: 12px; background: #fff; display: grid; place-items: center; color: var(--accent); box-shadow: 0 2px 8px rgba(16,24,40,.08); }
+.tip { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.art { background: var(--panel-2); display: flex; justify-content: center; gap: 8px; padding: 16px 10px; }
+.ti { width: 40px; height: 40px; border-radius: 8px; background: var(--panel); display: grid; place-items: center; color: var(--ink); border: 1px solid var(--line); }
 .ti:nth-child(odd) { transform: rotate(-6deg); }
 .ti:nth-child(even) { transform: rotate(5deg) translateY(-3px); }
 .tp { padding: 10px 12px 0; }
 .tip p { margin: 4px 12px 10px; line-height: 1.5; }
-.tip .full { width: calc(100% - 24px); margin: 0 12px 12px; height: 42px; border-radius: 10px; }
-.saldo { display: flex; align-items: center; gap: 10px; background: #f4f2fb; border-radius: 14px; padding: 12px 14px; color: var(--ink-2); }
-.saldo b { color: var(--accent); }
+.tip .full { width: calc(100% - 24px); margin: 0 12px 12px; height: 36px; border-radius: 8px; }
+.saldo { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; color: var(--ink-2); font-weight: 500; }
+.saldo:hover { background: var(--panel-2); }
+.saldo b { color: var(--ink); font-weight: 600; }
 @media (max-height: 760px) { .art { display: none; } }
 </style>

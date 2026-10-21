@@ -546,7 +546,7 @@ watch([leftOpen, rightOpen], () => nextTick(() => autoFit.value && fitPage()))
 </script>
 
 <template>
-  <div class="ed" :class="{ 'l-open': leftOpen, 'r-open': rightOpen }">
+  <div class="pub ed" :class="{ 'l-open': leftOpen, 'r-open': rightOpen }">
     <!-- sidebar kiri: judul, token desain, layer, halaman -->
     <div v-if="leftOpen" class="side left">
       <EditorLeftSidebar v-if="ready" @collapse="leftOpen = false" @focus-page="focusPage" />
@@ -615,40 +615,40 @@ watch([leftOpen, rightOpen], () => nextTick(() => autoFit.value && fitPage()))
 </template>
 
 <style scoped>
-.ed { --board: #efedf6; height: 100vh; display: flex; overflow: hidden; background: var(--board); }
+.ed { --board: #f4f4f5; height: 100vh; display: flex; overflow: hidden; background: var(--board); }
 .side { flex: 0 0 auto; height: 100%; z-index: 30; }
 .side.left { width: 290px; }
 .side.right { width: 320px; }
 .main { flex: 1; min-width: 0; position: relative; }
-.ws { position: absolute; inset: 0; overflow: hidden; background-color: var(--board); background-image: radial-gradient(rgba(80,60,140,.13) 1px, transparent 1.2px); background-size: 22px 22px; touch-action: none; }
-.ws.drag { outline: 3px dashed var(--accent); outline-offset: -8px; }
+.ws { position: absolute; inset: 0; overflow: hidden; background-color: var(--board); background-image: radial-gradient(rgba(24,24,27,.12) 1px, transparent 1.2px); background-size: 22px 22px; touch-action: none; }
+.ws.drag { outline: 2px dashed var(--ink-2); outline-offset: -8px; }
 .ws.hand { cursor: grab; }
 .ws.panning, .ws.panning * { cursor: grabbing !important; }
-.frame { position: absolute; background: #fff; box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 28px rgba(60,40,120,.10); cursor: pointer; border-radius: 2px; }
-.frame:not(.live):hover { outline: 2px solid rgba(139,61,255,.45); }
+.frame { position: absolute; background: #fff; box-shadow: 0 0 0 1px rgba(24,24,27,.06), 0 4px 16px rgba(24,24,27,.06); cursor: pointer; border-radius: 2px; }
+.frame:not(.live):hover { outline: 2px solid rgba(24,24,27,.35); }
 .frame img { width: 100%; height: 100%; display: block; object-fit: cover; pointer-events: none; }
 .frame.live { cursor: default; visibility: hidden; }
-.frame.live.on { visibility: visible; outline: 2px dashed rgba(139,61,255,.55); outline-offset: 3px; }
-.flabel { position: absolute; height: 28px; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; overflow: hidden; font-size: 17px; color: #6b6880; cursor: grab; user-select: none; padding-right: 4px; }
-.flabel b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
-.flabel span { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 16px; opacity: .8; }
-.flabel.on { color: var(--accent); }
+.frame.live.on { visibility: visible; outline: 1px solid rgba(24,24,27,.14); outline-offset: 0; }
+.flabel { position: absolute; height: 28px; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; overflow: hidden; font-size: 15px; color: var(--muted); cursor: grab; user-select: none; padding-right: 4px; }
+.flabel b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.flabel span { font-size: 14px; opacity: .7; }
+.flabel.on { color: var(--ink); }
 .panlayer { position: absolute; inset: 0; z-index: 5; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; gap: 8px; color: var(--muted); }
 
 /* UI melayang di atas board */
-.pill { position: absolute; top: 16px; z-index: 20; display: flex; gap: 4px; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.pill { position: absolute; top: 16px; z-index: 20; display: flex; gap: 4px; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
 .pill.l { left: 16px; }
 .pill.r { right: 16px; }
-.pb { width: 42px; height: 42px; border: 0; background: none; border-radius: 11px; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
+.pb { width: 38px; height: 38px; border: 0; background: none; border-radius: 7px; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
 .pb:hover { background: var(--panel-2); color: var(--ink); }
 .ctx { position: absolute; top: 16px; left: 0; right: 0; margin: 0 auto; width: fit-content; max-width: calc(100% - 240px); z-index: 15; }
-.ctx :deep(.bar) { border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); max-width: 100%; white-space: nowrap; }
+.ctx :deep(.bar) { border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); max-width: 100%; white-space: nowrap; }
 .rail { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); z-index: 20; }
-.toolpanel { position: absolute; left: 104px; top: 80px; bottom: 20px; width: 340px; max-height: 680px; z-index: 25; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-lg); }
-.toolpanel :deep(.hd) { border-radius: 18px 18px 0 0; }
-.zoom { position: absolute; left: 16px; bottom: 20px; z-index: 20; display: flex; flex-direction: column; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
-.zoom button { width: 46px; height: 42px; border: 0; background: none; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
+.toolpanel { position: absolute; left: 104px; top: 80px; bottom: 20px; width: 340px; max-height: 680px; z-index: 25; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); }
+.toolpanel :deep(.hd) { border-radius: 12px 12px 0 0; }
+.zoom { position: absolute; left: 16px; bottom: 20px; z-index: 20; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
+.zoom button { width: 42px; height: 38px; border: 0; background: none; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
 .zoom button:hover { background: var(--panel-2); color: var(--ink); }
 .zoom .pct { font-size: 11px; font-weight: 600; height: 26px; color: var(--muted); }
 .chatwrap { position: absolute; left: 96px; right: 24px; bottom: 20px; margin: 0 auto; max-width: 820px; z-index: 18; }
@@ -658,7 +658,7 @@ watch([leftOpen, rightOpen], () => nextTick(() => autoFit.value && fitPage()))
   .side { position: fixed; top: 0; bottom: 0; z-index: 60; box-shadow: var(--shadow-lg); }
   .side.left { left: 0; width: min(290px, 86vw); }
   .side.right { right: 0; width: min(320px, 90vw); }
-  .scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(14,19,24,.3); }
+  .scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(24,24,27,.35); }
   .ctx { top: 72px; max-width: calc(100% - 32px); }
   .toolpanel { left: 76px; right: 12px; width: auto; top: 128px; }
 }

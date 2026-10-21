@@ -50,19 +50,21 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDoc))
         <button class="menu-item" @click="more = false; showKeys = true"><Icon name="keyboard" :size="15" /> Pintasan keyboard</button>
       </div>
     </div>
-    <Teleport to="body"><EditorShortcutsDialog v-if="showKeys" @close="showKeys = false" /></Teleport>
+    <!-- dibungkus .pub agar dialog di luar editor tetap memakai token warna halaman awal -->
+    <Teleport to="body"><div class="pub tp"><EditorShortcutsDialog v-if="showKeys" @close="showKeys = false" /></div></Teleport>
   </nav>
 </template>
 
 <style scoped>
-.rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
-.it { width: 50px; height: 50px; border: 0; border-radius: 13px; background: none; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
+.rail { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
+.it { width: 42px; height: 42px; border: 0; border-radius: 7px; background: none; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); }
 .it:hover { background: var(--panel-2); color: var(--ink); }
-.it.on { background: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(139,61,255,.35); }
-.it.cur { background: var(--accent-soft); color: var(--accent); }
-.sp { width: 28px; height: 1px; background: var(--line); margin: 2px 0; }
+.it.on { background: var(--ink); color: #fff; }
+.it.cur { background: var(--panel-3); color: var(--ink); }
+.sp { width: 24px; height: 1px; background: var(--line); margin: 2px 0; }
 .wrap { position: relative; }
 .mp { left: calc(100% + 12px); bottom: 0; }
 .menu-item:disabled { opacity: .4; cursor: default; }
-@media (max-height: 640px), (max-width: 640px) { .it { width: 40px; height: 40px; } }
+@media (max-height: 640px), (max-width: 640px) { .it { width: 38px; height: 38px; } }
+.tp { display: contents; }
 </style>

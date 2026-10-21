@@ -130,7 +130,7 @@ export class Editor {
     setFilterBackend(new Canvas2dFilterBackend())
     this.canvas = markRaw(new Canvas(el, {
       preserveObjectStacking: true,
-      selectionColor: 'rgba(139,61,255,0.08)',
+      selectionColor: 'rgba(37,99,235,0.08)',
       selectionBorderColor: ACCENT,
       selectionLineWidth: 1,
       controlsAboveOverlay: true,
@@ -545,7 +545,7 @@ export class Editor {
   /** Bingkai foto kosong: isi dengan upload / gambar AI (pilih bingkai lalu klik gambar). */
   addFrame(kind: 'rect' | 'rounded' | 'circle') {
     const s = this.unit() * 0.4
-    const common = { fill: '#E9E3F7', stroke: '#B79CF0', strokeWidth: 2, strokeDashArray: [12, 8], imagePrompt: 'Foto', name: 'Bingkai foto' } as any
+    const common = { fill: '#E4E4E7', stroke: '#A1A1AA', strokeWidth: 2, strokeDashArray: [12, 8], imagePrompt: 'Foto', name: 'Bingkai foto' } as any
     const o = kind === 'circle'
       ? new Ellipse({ rx: s / 2, ry: s / 2, ...common })
       : new Rect({ width: s, height: s * (kind === 'rect' ? 0.75 : 1), rx: kind === 'rounded' ? s * 0.12 : 0, ry: kind === 'rounded' ? s * 0.12 : 0, ...common })

@@ -93,7 +93,7 @@ function placeholderImage(el: any) {
   const radius = el.shape === 'circle' ? Math.min(w, h) / 2 : n(el.radius)
   return new Rect({
     left: n(el.x), top: n(el.y), width: w, height: h, rx: radius, ry: radius,
-    fill: '#E9E3F7', stroke: '#B79CF0', strokeWidth: 2, strokeDashArray: [12, 8],
+    fill: '#E4E4E7', stroke: '#A1A1AA', strokeWidth: 2, strokeDashArray: [12, 8],
     id: uid(), name: 'Gambar (placeholder AI)', imagePrompt: el.imagePrompt || '',
   } as any)
 }
