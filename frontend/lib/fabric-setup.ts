@@ -3,7 +3,7 @@ import { FabricObject, Textbox, ActiveSelection } from 'fabric'
 
 let done = false
 
-export const ACCENT = '#8B3DFF'
+export const ACCENT = '#2563EB'
 
 export function setupFabric() {
   if (done) return
@@ -23,7 +23,7 @@ export function setupFabric() {
   }
   Object.assign(FabricObject.ownDefaults, controls)
   Object.assign(ActiveSelection.ownDefaults, controls)
-  Object.assign(Textbox.ownDefaults, { editingBorderColor: ACCENT, cursorColor: ACCENT, selectionColor: 'rgba(139,61,255,0.25)' })
+  Object.assign(Textbox.ownDefaults, { editingBorderColor: ACCENT, cursorColor: ACCENT, selectionColor: 'rgba(37,99,235,0.25)' })
 }
 
 export function uid(prefix = 'o') {

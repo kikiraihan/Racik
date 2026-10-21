@@ -123,16 +123,16 @@ function onKey(e: KeyboardEvent) {
 </template>
 
 <style scoped>
-.chat { background: #fff; border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 12px 40px rgba(60,40,120,.14); padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 10px; }
+.chat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 10px; }
 textarea { border: 0; outline: none; resize: none; font-size: 16px; line-height: 1.5; padding: 4px 8px; background: none; max-height: 160px; }
-textarea::placeholder { color: #8a8796; }
+textarea::placeholder { color: var(--muted); }
 .bar { display: flex; align-items: center; gap: 8px; }
-.modes { display: flex; background: #f1f0f7; border-radius: 12px; padding: 3px; gap: 2px; }
-.modes button { border: 0; background: none; height: 34px; padding: 0 12px; border-radius: 9px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--muted); font-weight: 600; font-size: 13px; white-space: nowrap; }
-.modes button.on { background: #fff; color: var(--accent); box-shadow: 0 1px 3px rgba(16,24,40,.12); }
+.modes { display: flex; background: var(--panel-2); border-radius: 8px; padding: 3px; gap: 2px; }
+.modes button { border: 0; background: none; height: 30px; padding: 0 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--muted); font-weight: 500; font-size: 13px; white-space: nowrap; }
+.modes button.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 .cost { font-size: 12px; white-space: nowrap; }
-.send { width: 44px; height: 44px; border-radius: 12px; border: 0; background: #b89cf0; color: #fff; display: grid; place-items: center; cursor: pointer; flex: 0 0 44px; transition: background .15s; }
-.send.ready { background: var(--accent); }
+.send { width: 36px; height: 36px; border-radius: 8px; border: 0; background: var(--line-2); color: #fff; display: grid; place-items: center; cursor: pointer; flex: 0 0 36px; transition: background .15s; }
+.send.ready { background: var(--ink); }
 .send:disabled { cursor: progress; }
 @media (max-width: 640px) {
   .modes button span { display: none; }

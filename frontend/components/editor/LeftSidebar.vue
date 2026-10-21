@@ -88,7 +88,7 @@ function finishRename(i: number, e: Event) {
 <template>
   <aside class="ls">
     <div class="hd">
-      <NuxtLink to="/" class="brand" title="Beranda"><EditorLogoMark :size="26" /><span>racik</span></NuxtLink>
+      <NuxtLink to="/" class="brand" title="Beranda"><EditorLogoMark :size="26" /><span>Racik</span></NuxtLink>
       <button class="ib" title="Tutup sidebar (Ctrl+\)" @click="emit('collapse')"><Icon name="panelLeft" :size="20" /></button>
     </div>
 
@@ -117,7 +117,7 @@ function finishRename(i: number, e: Event) {
           <span class="grow nm">{{ c.value }}</span>
           <span class="muted cnt">{{ c.count }}×</span>
         </button>
-        <p v-if="!colors.length" class="muted empty">Belum ada warna.</p>
+        <p v-if="!colors.length" class="muted kosong">Belum ada warna.</p>
       </div>
 
       <button class="sec" @click="openSec.fonts = !openSec.fonts"><Icon :name="openSec.fonts ? 'down' : 'right'" :size="15" /> Font <span class="muted cnt">{{ fonts.length }}</span></button>
@@ -127,7 +127,7 @@ function finishRename(i: number, e: Event) {
           <span class="grow nm" :style="{ fontFamily: f.value }">{{ f.value }}</span>
           <span class="muted cnt">{{ f.count }}×</span>
         </button>
-        <p v-if="!fonts.length" class="muted empty">Belum ada teks.</p>
+        <p v-if="!fonts.length" class="muted kosong">Belum ada teks.</p>
       </div>
 
       <button class="sec" @click="openSec.layers = !openSec.layers"><Icon :name="openSec.layers ? 'down' : 'right'" :size="15" /> Layer <span class="muted cnt">{{ st.layers.length }}</span></button>
@@ -161,23 +161,22 @@ function finishRename(i: number, e: Event) {
 </template>
 
 <style scoped>
-.ls { width: 100%; height: 100%; display: flex; flex-direction: column; background: #fff; border-right: 1px solid var(--line); }
+.ls { width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
 .hd { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 8px; }
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 19px; letter-spacing: -.02em; }
-.brand span { background: linear-gradient(90deg, var(--ink) 55%, var(--accent) 55%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.ib { border: 0; background: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); flex: 0 0 auto; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 18px; letter-spacing: -.02em; }
+.ib { border: 0; background: none; width: 34px; height: 34px; border-radius: 7px; display: grid; place-items: center; cursor: pointer; color: var(--ink-2); flex: 0 0 auto; }
 .ib:hover { background: var(--panel-2); color: var(--ink); }
 .ib.sm { width: 30px; height: 30px; }
 .title { display: flex; align-items: center; gap: 6px; padding: 10px 12px 10px 16px; }
-.title input { flex: 1; min-width: 0; border: 1px solid transparent; border-radius: 8px; padding: 6px 6px 6px 0; font-size: 17px; font-weight: 700; outline: none; background: none; }
+.title input { flex: 1; min-width: 0; border: 1px solid transparent; border-radius: 8px; padding: 6px 6px 6px 0; font-size: 16px; font-weight: 600; letter-spacing: -.01em; outline: none; background: none; }
 .title input:focus { border-color: var(--line); padding-left: 6px; }
 .title input::placeholder { color: var(--ink); }
-.seg { margin: 4px 16px 10px; background: #f1f0f7; border-radius: 12px; padding: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.seg button { border: 0; background: none; height: 36px; border-radius: 9px; cursor: pointer; font-weight: 600; color: var(--muted); }
-.seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(16,24,40,.1); }
+.seg { margin: 4px 16px 10px; background: var(--panel-2); border-radius: 8px; padding: 3px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.seg button { border: 0; background: none; height: 30px; border-radius: 6px; cursor: pointer; font-weight: 500; color: var(--muted); }
+.seg button.on { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 .body { flex: 1; min-height: 0; padding: 0 12px 12px; }
 .tk { display: flex; align-items: center; gap: 6px; padding: 6px 4px 8px; min-height: 44px; }
-.sec { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; padding: 10px 4px; cursor: pointer; font-weight: 700; font-size: 14px; text-align: left; }
+.sec { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; padding: 10px 4px; cursor: pointer; font-weight: 600; font-size: 14px; text-align: left; }
 .sec .cnt { margin-left: auto; font-weight: 500; }
 .items { display: flex; flex-direction: column; gap: 2px; padding-bottom: 6px; }
 .items.lay { padding: 2px 4px 8px; }
@@ -187,21 +186,21 @@ function finishRename(i: number, e: Event) {
 .sw.ft { display: grid; place-items: center; font-size: 13px; background: var(--panel-2); }
 .nm { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cnt { font-size: 12px; }
-.empty { font-size: 12px; margin: 2px 6px 6px; }
+.kosong { font-size: 12px; margin: 2px 6px 6px; }
 .small { font-size: 12px; }
 .pages { display: flex; flex-direction: column; gap: 6px; }
-.pg { display: flex; gap: 10px; padding: 8px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+.pg { display: flex; gap: 10px; padding: 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
 .pg:hover { background: var(--panel-2); }
-.pg.on { border-color: var(--accent); background: var(--accent-soft); }
+.pg.on { border-color: var(--line-2); background: var(--panel-2); }
 .th { width: 84px; flex: 0 0 84px; max-height: 84px; border-radius: 6px; overflow: hidden; background: #fff; box-shadow: 0 0 0 1px var(--line); align-self: flex-start; }
 .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .meta { display: flex; flex-direction: column; gap: 2px; }
 .meta .nm { font-size: 13px; }
 .pa { display: flex; gap: 2px; margin-top: 4px; }
 .pa button { border: 0; background: rgba(0,0,0,.04); border-radius: 6px; width: 24px; height: 22px; display: grid; place-items: center; cursor: pointer; padding: 0; color: var(--ink-2); }
-.pa button:hover:not(:disabled) { background: #fff; color: var(--accent); }
+.pa button:hover:not(:disabled) { background: var(--panel); color: var(--ink); }
 .pa button:disabled { opacity: .35; cursor: default; }
 .add { width: 100%; margin-top: 10px; border-style: dashed; }
 .ft-link { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-top: 1px solid var(--line); color: var(--ink-2); font-weight: 500; }
-.ft-link:hover { color: var(--accent); }
+.ft-link:hover { color: var(--ink); background: var(--panel-2); }
 </style>

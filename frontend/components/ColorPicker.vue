@@ -83,7 +83,8 @@ const swatchStyle = computed(() => ({
 <style scoped>
 .cp { position: relative; display: inline-block; }
 .sw { border-radius: 6px; border: 1px solid rgba(0,0,0,.15); cursor: pointer; padding: 0; display: block; }
-.sw.empty { background: repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0/10px 10px !important; }
+/* padding/border/radius diulang agar tidak tertimpa .pub .empty (kotak kosong halaman public) */
+.sw.empty { background: repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0/10px 10px !important; padding: 0; border: 1px solid rgba(0,0,0,.15); border-radius: 6px; }
 .pop { width: 244px; position: fixed; z-index: 120; }
 .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
 .cell { aspect-ratio: 1; border-radius: 6px; border: 1px solid rgba(0,0,0,.12); cursor: pointer; padding: 0; }
