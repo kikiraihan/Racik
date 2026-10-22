@@ -153,6 +153,13 @@ func (c *Client) getModels(ctx context.Context) ([]byte, error) {
 	return raw, nil
 }
 
+// ChatUnsupported: varian model yang tidak bisa dipanggil lewat /chat/completions maupun
+// /images/generations, mis. "anthropic/claude-sonnet-5.5:batch" di OpenRouter (hanya Batch
+// API, ditolak 404 "cannot be used with the chat/completions endpoint").
+func ChatUnsupported(id string) bool {
+	return strings.HasSuffix(id, ":batch")
+}
+
 func (c *Client) fetchCatalog(ctx context.Context) ([]CatalogModel, error) {
 	raw, err := c.getModels(ctx)
 	if err != nil {
@@ -166,7 +173,7 @@ func (c *Client) fetchCatalog(ctx context.Context) ([]CatalogModel, error) {
 	out := make([]CatalogModel, 0, len(list.Data))
 	for _, m := range list.Data {
 		kind := catalogKind(m.Architecture.OutputModalities)
-		if m.ID == "" || kind == "" {
+		if m.ID == "" || kind == "" || ChatUnsupported(m.ID) {
 			continue
 		}
 		cm := CatalogModel{
@@ -218,7 +225,7 @@ func (c *Client) fetchKenariCatalog(ctx context.Context) ([]CatalogModel, error)
 	}
 	out := make([]CatalogModel, 0, len(list.Data))
 	for _, m := range list.Data {
-		if m.ID == "" {
+		if m.ID == "" || ChatUnsupported(m.ID) {
 			continue
 		}
 		var kinds []string
