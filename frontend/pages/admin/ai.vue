@@ -1,14 +1,9 @@
 <script setup lang="ts">
 // Konfigurasi AI: model untuk tiap fitur AI.
+// Pilihan modelnya diambil dari Katalog model (halaman terpisah, /admin/models).
 definePageMeta({ layout: 'admin', title: 'Konfigurasi AI' })
-
-// Katalog OpenRouter menambah pilihan model → muat ulang dropdown konfigurasi.
-const cfg = ref<{ load: () => Promise<void> } | null>(null)
 </script>
 
 <template>
-  <div>
-    <AdminAiConfig ref="cfg" />
-    <AdminOpenRouterCatalog style="margin-top: 16px" @changed="cfg?.load()" />
-  </div>
+  <AdminAiConfig />
 </template>

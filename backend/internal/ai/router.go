@@ -41,26 +41,42 @@ type Provider struct {
 	Lister                 modelLister
 	CheckText, CheckImages bool
 
-	// Model tambahan dari Panel admin (katalog OpenRouter), di luar daftar env.
-	// Diubah lewat Router.SetExtraModels, dibaca di bawah Router.mu.
-	extraText, extraImage []string
+	// Inactive: provider terdaftar tapi API key-nya kosong (hanya kenari, untuk pesan error);
+	// modelnya tidak ditawarkan.
+	Inactive bool
+
+	// Model aktif dari Panel admin → Katalog model (tabel ai_models). Selama katalog belum
+	// dipasang (fromCatalog false) yang ditawarkan adalah model env. Diubah lewat
+	// Router.SetCatalog, dibaca di bawah Router.mu.
+	fromCatalog       bool
+	catText, catImage []string
 }
 
-// textModels / imageModels: model env + tambahan admin (tanpa duplikat). Panggil di bawah Router.mu.
-func (p *Provider) textModels() []string  { return mergeModels(p.TextModels, p.extraText) }
-func (p *Provider) imageModels() []string { return mergeModels(p.ImageModels, p.extraImage) }
+// textModels / imageModels: model katalog aktif (atau model env sebelum katalog dipasang).
+// Panggil di bawah Router.mu.
+func (p *Provider) textModels() []string {
+	switch {
+	case p.Inactive:
+		return nil
+	case p.fromCatalog:
+		return p.catText
+	}
+	return p.TextModels
+}
 
-func mergeModels(base, extra []string) []string {
-	if len(extra) == 0 {
-		return base
+func (p *Provider) imageModels() []string {
+	switch {
+	case p.Inactive:
+		return nil
+	case p.fromCatalog:
+		return p.catImage
 	}
-	out := slices.Clone(base)
-	for _, m := range extra {
-		if !slices.Contains(out, m) {
-			out = append(out, m)
-		}
-	}
-	return out
+	return p.ImageModels
+}
+
+// CatalogModels: model aktif satu provider di katalog.
+type CatalogModels struct {
+	Text, Image []string
 }
 
 // Router memilih provider berdasarkan id pilihan "<provider>:<model>". Hanya awalan
@@ -75,8 +91,9 @@ type Router struct {
 	// Observe dipanggil setelah setiap request ke vendor AI (untuk log vendor). Opsional.
 	Observe func(ctx context.Context, c Call)
 
-	// Catalog: katalog model OpenRouter untuk Panel admin; nil = OpenRouter tidak aktif.
-	Catalog *Catalog
+	// Catalogs: daftar model dari API provider untuk Panel admin → Katalog model, per nama
+	// provider (openrouter, kenari). Provider yang tidak aktif tidak punya entri.
+	Catalogs map[string]*Catalog
 }
 
 // Call: ringkasan satu request ke vendor AI.
@@ -120,7 +137,9 @@ func lastUserText(msgs []Message) string {
 	return ""
 }
 
-func NewRouter() *Router { return &Router{providers: map[string]*Provider{}} }
+func NewRouter() *Router {
+	return &Router{providers: map[string]*Provider{}, Catalogs: map[string]*Catalog{}}
+}
 
 func (r *Router) Add(p *Provider) {
 	if _, ok := r.providers[p.Name]; !ok {
@@ -193,15 +212,48 @@ func (r *Router) Labels() map[string]string {
 // Has: provider name aktif (API key diisi).
 func (r *Router) Has(name string) bool { return r.providers[name] != nil }
 
-// SetExtraModels memasang model tambahan dari Panel admin untuk provider name (mis. model
-// dari katalog OpenRouter). Menggantikan daftar tambahan sebelumnya; provider yang tidak
-// aktif diabaikan. Aman dipanggil saat server berjalan.
-func (r *Router) SetExtraModels(name string, text, image []string) {
+// SetCatalog memasang model aktif dari Panel admin → Katalog model, per nama provider.
+// Provider yang tidak ada di models tidak menawarkan model apa pun; models nil = kembali
+// ke model env. Aman dipanggil saat server berjalan.
+func (r *Router) SetCatalog(models map[string]CatalogModels) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if p := r.providers[name]; p != nil {
-		p.extraText, p.extraImage = slices.Clone(text), slices.Clone(image)
+	for name, p := range r.providers {
+		m := models[name]
+		p.fromCatalog = models != nil
+		p.catText, p.catImage = slices.Clone(m.Text), slices.Clone(m.Image)
 	}
+}
+
+// ProviderInfo: ringkasan provider untuk Panel admin (tanpa API key).
+type ProviderInfo struct {
+	Name     string   `json:"name"`
+	Label    string   `json:"label"`
+	Active   bool     `json:"active"` // API key diisi
+	Text     bool     `json:"text"`   // melayani model teks
+	Image    bool     `json:"image"`  // melayani model gambar
+	Edit     bool     `json:"edit"`   // bisa edit gambar
+	Catalog  bool     `json:"catalog"`
+	EnvText  []string `json:"envText"`  // model teks dari env (bawaan)
+	EnvImage []string `json:"envImage"` // model gambar dari env (bawaan)
+}
+
+// Providers: provider terdaftar sesuai urutan dropdown.
+func (r *Router) Providers() []ProviderInfo {
+	out := make([]ProviderInfo, 0, len(r.order))
+	for _, name := range r.order {
+		p := r.providers[name]
+		info := ProviderInfo{Name: name, Label: p.Label, Active: !p.Inactive, Text: p.Text != nil, Image: p.Image != nil,
+			Edit: p.Edit != nil, Catalog: r.Catalogs[name] != nil, EnvText: []string{}, EnvImage: []string{}}
+		if info.Text {
+			info.EnvText = slices.Clone(p.TextModels)
+		}
+		if info.Image {
+			info.EnvImage = slices.Clone(p.ImageModels)
+		}
+		out = append(out, info)
+	}
+	return out
 }
 
 // SetDefaults mengatur model default; nilai kosong / tidak aktif = pilihan pertama.
@@ -289,7 +341,7 @@ func (r *Router) CheckModels(ctx context.Context) []string {
 	var warnings []string
 	for _, name := range r.order {
 		p := r.providers[name]
-		if p.Lister == nil {
+		if p.Lister == nil || p.Inactive {
 			continue
 		}
 		groups := []struct {
@@ -329,7 +381,10 @@ func FromConfig(cfg config.Config) *Router {
 		Lister: kenari, CheckText: true, CheckImages: true})
 	if !kenari.Configured() {
 		// Tetap terdaftar untuk pesan error, tapi modelnya tidak ditawarkan.
-		r.providers["kenari"].TextModels, r.providers["kenari"].ImageModels = nil, nil
+		r.providers["kenari"].Inactive = true
+	} else {
+		// Katalog /models kenari untuk menambah model dari Panel admin → Katalog model.
+		r.Catalogs["kenari"] = NewKenariCatalog(kenari)
 	}
 
 	if p := cfg.Anthropic; p.APIKey != "" {
@@ -353,8 +408,8 @@ func FromConfig(cfg config.Config) *Router {
 		o := NewOpenRouter(p.BaseURL, p.APIKey, cfg.PublicURL, "Racik", timeout)
 		r.Add(&Provider{Name: "openrouter", Label: "OpenRouter", Text: o, Image: o, Edit: o,
 			TextModels: p.TextModels, ImageModels: p.ImageModels, Lister: o, CheckText: true, CheckImages: true})
-		// Katalog /models untuk menambah model dari Panel admin → Konfigurasi AI.
-		r.Catalog = NewCatalog(o)
+		// Katalog /models untuk menambah model dari Panel admin → Katalog model.
+		r.Catalogs["openrouter"] = NewCatalog(o)
 	}
 	if p := cfg.HuggingFace; p.APIKey != "" {
 		r.Add(&Provider{Name: "huggingface", Label: "Hugging Face", Image: NewHuggingFace(p.BaseURL, p.APIKey, timeout), ImageModels: p.ImageModels})

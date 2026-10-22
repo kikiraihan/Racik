@@ -62,8 +62,9 @@ func main() {
 
 	api := handlers.New(conn, cfg, logger)
 	api.ServerLog = serverLog
-	// Model OpenRouter tambahan yang dipilih admin dari katalog (tersimpan di database).
-	api.ApplyOpenRouterModels(ctx)
+	// Katalog model (Panel admin → Katalog model): model env jadi model bawaan, lalu model
+	// katalog yang aktif dipasang ke router (tersimpan di database).
+	api.SyncCatalog(ctx)
 	srv := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           api.Routes(),
