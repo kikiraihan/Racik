@@ -30,7 +30,9 @@ const user = computed(() => session.user.value)
 const initial = computed(() => (user.value?.name || user.value?.email || '?')[0]!.toUpperCase())
 
 function isActive(item: { to: string; exact?: boolean }) {
-  return item.exact ? route.path === item.to || route.path === item.to + '/' : route.path.startsWith(item.to)
+  // Cocokkan per segmen path supaya /admin/ai tidak ikut aktif di /admin/ai-calls.
+  if (route.path === item.to || route.path === item.to + '/') return true
+  return !item.exact && route.path.startsWith(item.to + '/')
 }
 
 function toggleSidebar() {

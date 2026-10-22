@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -27,7 +28,9 @@ var anthropicFallbackModels = map[string]bool{
 }
 
 func NewAnthropic(apiKey, baseURL, effort string, timeout time.Duration) *Anthropic {
-	opts := []option.RequestOption{option.WithAPIKey(apiKey), option.WithRequestTimeout(timeout)}
+	// HTTP client dengan pencatat AI API Call Log (timeout tetap lewat WithRequestTimeout).
+	opts := []option.RequestOption{option.WithAPIKey(apiKey), option.WithRequestTimeout(timeout),
+		option.WithHTTPClient(&http.Client{Transport: callLogTransport{}})}
 	if baseURL != "" {
 		opts = append(opts, option.WithBaseURL(baseURL))
 	}

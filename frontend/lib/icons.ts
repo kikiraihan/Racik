@@ -8,6 +8,7 @@ export const ICON_PATHS: Record<string, string> = {
   terminal: 'M4 17l6-6-6-6 M12 19h8',
   refresh: 'M21 12a9 9 0 0 1-15.5 6.2L3 16 M3 21v-5h5 M3 12a9 9 0 0 1 15.5-6.2L21 8 M21 3v5h-5',
   activity: 'M22 12h-4l-3 9L9 3l-3 9H2',
+  gauge: 'M12 14l4-4 M3.34 19a10 10 0 1 1 17.32 0',
   monitor: 'M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M8 21h8 M12 17v4',
   pause: 'M7 4h3v16H7z M14 4h3v16h-3z',
   play: 'M6 4l14 8-14 8z',

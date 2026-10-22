@@ -60,8 +60,15 @@ func main() {
 		}
 	}()
 
+	// AI API Call Log (tabel ai_api_calls): antrean penulisan memakai logCtx seperti
+	// system log supaya sisa baris tetap tersimpan saat shutdown.
+	aiCalls := applog.NewAPICalls(conn)
+	go aiCalls.Run(logCtx)
+	aiCalls.StartRetention(ctx, cfg.AICallLogRetentionDays)
+
 	api := handlers.New(conn, cfg, logger)
 	api.ServerLog = serverLog
+	api.AICalls = aiCalls
 	// Katalog model (Panel admin → Katalog model): model env jadi model bawaan, lalu model
 	// katalog yang aktif dipasang ke router (tersimpan di database).
 	api.SyncCatalog(ctx)
@@ -88,6 +95,7 @@ func main() {
 	_ = srv.Shutdown(shutdownCtx)
 	stopLog()
 	logger.Wait(10 * time.Second)
+	aiCalls.Wait(5 * time.Second)
 	log.Println("server berhenti")
 }
 

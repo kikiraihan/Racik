@@ -24,7 +24,7 @@ type Pollinations struct {
 }
 
 func NewPollinations(enabled bool, timeout time.Duration) *Pollinations {
-	return &Pollinations{BaseURL: "https://image.pollinations.ai/prompt/", Enabled: enabled, HTTP: &http.Client{Timeout: timeout}}
+	return &Pollinations{BaseURL: "https://image.pollinations.ai/prompt/", Enabled: enabled, HTTP: newHTTPClient(timeout)}
 }
 
 func (p *Pollinations) Configured() bool { return p.Enabled }
@@ -55,7 +55,7 @@ type HuggingFace struct {
 }
 
 func NewHuggingFace(baseURL, apiKey string, timeout time.Duration) *HuggingFace {
-	return &HuggingFace{BaseURL: strings.TrimRight(baseURL, "/"), APIKey: apiKey, HTTP: &http.Client{Timeout: timeout}}
+	return &HuggingFace{BaseURL: strings.TrimRight(baseURL, "/"), APIKey: apiKey, HTTP: newHTTPClient(timeout)}
 }
 
 func (h *HuggingFace) Configured() bool { return h.APIKey != "" }

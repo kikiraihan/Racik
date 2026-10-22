@@ -68,6 +68,10 @@ type Config struct {
 	LogESAPIKey      string
 	LogIndexPrefix   string // index: <prefix>-activity-YYYY.MM & <prefix>-vendor-YYYY.MM
 	LogRetentionDays int    // ILM: index dihapus setelah N hari (0 = simpan selamanya)
+
+	// AI API Call Log (tabel ai_api_calls di PostgreSQL, Panel admin → AI API Call Log).
+	AICallLogBodies        bool // simpan ringkasan body request/response
+	AICallLogRetentionDays int  // baris dihapus setelah N hari (0 = simpan selamanya)
 }
 
 // Provider: konfigurasi satu provider AI selain kenari.
@@ -158,6 +162,8 @@ func Load() Config {
 	c.LogESAPIKey = env("LOG_ES_API_KEY", "")
 	c.LogIndexPrefix = env("LOG_INDEX_PREFIX", "racik")
 	c.LogRetentionDays = envInt("LOG_RETENTION_DAYS", 90)
+	c.AICallLogBodies = env("AI_CALL_LOG_BODIES", "true") == "true"
+	c.AICallLogRetentionDays = envInt("AI_CALL_LOG_RETENTION_DAYS", 30)
 	return c
 }
 

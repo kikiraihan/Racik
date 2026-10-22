@@ -44,7 +44,7 @@ func NewNvidiaImage(apiKey string, steps int, timeout time.Duration) *NvidiaImag
 		steps = 4
 	}
 	return &NvidiaImage{
-		APIKey: apiKey, HTTP: &http.Client{Timeout: timeout}, Fallback: NvidiaImageDefault, Steps: steps,
+		APIKey: apiKey, HTTP: newHTTPClient(timeout), Fallback: NvidiaImageDefault, Steps: steps,
 		BaseURL:       "https://ai.api.nvidia.com/v1/genai/",
 		NVCFStatusURL: "https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/",
 		PollEvery:     2 * time.Second, PollTimeout: 150 * time.Second,

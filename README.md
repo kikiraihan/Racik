@@ -62,6 +62,7 @@ Racik adalah web app editor desain (gaya Canva) dengan **AI auto-generate desain
 - **Panel admin** (`/admin`) punya tampilan sendiri, beda dari halaman public: sidebar gelap (bisa diciutkan `Ctrl+\`, jadi drawer di mobile), topbar dengan judul halaman, dan **mode gelap** (terang / gelap / ikut sistem, hanya berlaku di panel admin). Menu:
   - **Ringkasan**: jumlah user, generate AI hari ini, pemakaian saldo & top up 30 hari, desain tersimpan, kepuasan hasil AI, grafik 14 hari, generate per fitur, status sistem (provider AI, model aktif, Elasticsearch, login Google, log server), transaksi saldo terbaru
   - **Pengguna & saldo**, **Katalog model**, **Konfigurasi AI**, **Konfigurasi harga**
+  - **AI API Call Log** (lihat [AI API Call Log](#ai-api-call-log)): setiap request HTTP ke vendor AI di PostgreSQL — ringkasan per fitur & model, daftar dengan filter, detail body request/response
   - **System log** (Elasticsearch) dan **Log server**: 3000 baris log backend terakhir dari memori (access log HTTP, peringatan, error) dengan filter level/sumber, pencarian, live refresh, dan unduh `.txt` — tetap bisa dipakai walaupun Elasticsearch belum diatur (isinya hilang saat backend restart)
 
 ### Lainnya
@@ -268,6 +269,17 @@ Dua jenis log dikirim asinkron (batch lewat Bulk API, tidak memperlambat request
 
 Kenapa Elasticsearch: cocok untuk log terstruktur yang perlu dicari & difilter (per user, aksi, error), ada Kibana untuk dashboard, dan retensi via ILM. Kalau RAM server terbatas (ES butuh ±1 GB), alternatif yang lebih ringan adalah **VictoriaLogs** (single binary, RAM puluhan MB, menerima Bulk API Elasticsearch sehingga pengiriman log tetap jalan dengan `LOG_ES_URL=http://victorialogs:9428/insert/elasticsearch`) — tetapi pencarian di Panel admin memakai Search API Elasticsearch, jadi untuk VictoriaLogs pencarian dilakukan lewat UI VictoriaLogs/Grafana.
 
+## AI API Call Log
+
+Pola sama dengan AI API Call Log di tiara: **setiap request HTTP ke vendor AI** (termasuk percobaan ulang SDK, model cadangan kenari/Groq/NVIDIA, dan fallback gambar lewat chat) disimpan di tabel `ai_api_calls` PostgreSQL — selalu aktif, tidak butuh Elasticsearch.
+
+- Isi per baris: `provider`, `endpoint` (path URL), `model` yang benar-benar dikirim, `operation` (chat/image/edit), `feature` (`ai.design`, `ai.refine`, …), `user_id`, `request_id`, `http_status`, `is_success`, `latency_ms`, token (`prompt`/`completion`/`total`, kalau dilaporkan vendor), `cost` (USD dari vendor, mis. OpenRouter), `vendor_price` (Rupiah per hit dari Konfigurasi harga, hanya yang sukses), `error_message`, ringkasan `request_body` & `response_body`.
+- Pencatatan dipasang di `http.RoundTripper` klien provider (`backend/internal/ai/calllog.go`), hanya untuk panggilan lewat router AI — daftar `/models`, cek model saat start, dan unduhan gambar hasil tidak tercatat. Jawaban 200 + objek `error` dari kenari dicatat sebagai gagal.
+- Gambar base64 (request edit gambar, jawaban gambar) tidak disimpan, diganti ukurannya; body JSON > 64 KB diringkas.
+- Penulisan asinkron lewat antrean (request user tidak menunggu database); kalau antrean penuh baris dibuang dan dicatat di Log server.
+- `AI_CALL_LOG_BODIES` (default `true`) — simpan ringkasan body; `AI_CALL_LOG_RETENTION_DAYS` (default 30, `0` = selamanya) — baris lama dihapus saat start lalu setiap 6 jam.
+- `request_id` sama dengan System log / Log server; dari halaman detail ada tautan ke semua panggilan AI dalam request yang sama.
+
 ## API ringkas
 
 | Method | Path | Keterangan |
@@ -295,6 +307,10 @@ Kenapa Elasticsearch: cocok untuk log terstruktur yang perlu dicari & difilter (
 | GET/PUT | `/api/admin/pricing` | (admin) Markup global, tarif model gratis, harga vendor per model |
 | GET | `/api/admin/overview` | (admin) Angka ringkasan untuk halaman Ringkasan |
 | GET | `/api/admin/server-logs` | (admin) Log server dari memori (`q`, `level=info\|warn\|error`, `source=http\|app\|log`, `after`, `limit`) |
+| GET | `/api/admin/ai-calls` | (admin) AI API Call Log (`q`, `feature`, `operation`, `provider`, `model`, `success`, `userId`, `requestId`, `from`, `to` (YYYY-MM-DD), `sort`, `dir`, `page`, `size`) |
+| GET | `/api/admin/ai-calls/summary` | (admin) Ringkasan per fitur & model (`days`, default 7) |
+| GET | `/api/admin/ai-calls/{id}` | (admin) Detail satu panggilan + body request & response |
+| POST | `/api/admin/ai-calls/delete` | (admin) Hapus log `{ids: [...]}` atau `{all: true}` |
 | GET | `/api/admin/logs` | (admin) Cari system log (`type=activity\|vendor`, `q`, `action`, `success`, `userId`, `from`, `to`, `page`) |
 
 ## Testing
