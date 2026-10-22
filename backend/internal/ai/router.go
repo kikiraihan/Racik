@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/kikiraihan/racik/backend/internal/config"
@@ -39,11 +40,33 @@ type Provider struct {
 	// Daftar model dari API provider untuk dicek saat start (opsional).
 	Lister                 modelLister
 	CheckText, CheckImages bool
+
+	// Model tambahan dari Panel admin (katalog OpenRouter), di luar daftar env.
+	// Diubah lewat Router.SetExtraModels, dibaca di bawah Router.mu.
+	extraText, extraImage []string
+}
+
+// textModels / imageModels: model env + tambahan admin (tanpa duplikat). Panggil di bawah Router.mu.
+func (p *Provider) textModels() []string  { return mergeModels(p.TextModels, p.extraText) }
+func (p *Provider) imageModels() []string { return mergeModels(p.ImageModels, p.extraImage) }
+
+func mergeModels(base, extra []string) []string {
+	if len(extra) == 0 {
+		return base
+	}
+	out := slices.Clone(base)
+	for _, m := range extra {
+		if !slices.Contains(out, m) {
+			out = append(out, m)
+		}
+	}
+	return out
 }
 
 // Router memilih provider berdasarkan id pilihan "<provider>:<model>". Hanya awalan
 // sampai ":" pertama yang dibuang — id kenari sendiri bisa memuat ":" (step-5-preview:free).
 type Router struct {
+	mu        sync.RWMutex // menjaga model tambahan admin (SetExtraModels)
 	providers map[string]*Provider
 	order     []string
 	textDef   string
@@ -51,6 +74,9 @@ type Router struct {
 
 	// Observe dipanggil setelah setiap request ke vendor AI (untuk log vendor). Opsional.
 	Observe func(ctx context.Context, c Call)
+
+	// Catalog: katalog model OpenRouter untuk Panel admin; nil = OpenRouter tidak aktif.
+	Catalog *Catalog
 }
 
 // Call: ringkasan satu request ke vendor AI.
@@ -115,6 +141,8 @@ func Choice(provider, model string) string { return provider + ":" + model }
 func (r *Router) Configured() bool { return len(r.TextChoices()) > 0 }
 
 func (r *Router) choices(pick func(*Provider) []string) []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	var out []string
 	for _, name := range r.order {
 		for _, m := range pick(r.providers[name]) {
@@ -129,7 +157,7 @@ func (r *Router) TextChoices() []string {
 		if p.Text == nil {
 			return nil
 		}
-		return p.TextModels
+		return p.textModels()
 	})
 }
 
@@ -138,7 +166,7 @@ func (r *Router) ImageChoices() []string {
 		if p.Image == nil {
 			return nil
 		}
-		return p.ImageModels
+		return p.imageModels()
 	})
 }
 
@@ -148,7 +176,7 @@ func (r *Router) EditChoices() []string {
 		if p.Edit == nil {
 			return nil
 		}
-		return p.ImageModels
+		return p.imageModels()
 	})
 }
 
@@ -160,6 +188,20 @@ func (r *Router) Labels() map[string]string {
 		out[c] = model + " · " + r.providers[name].Label
 	}
 	return out
+}
+
+// Has: provider name aktif (API key diisi).
+func (r *Router) Has(name string) bool { return r.providers[name] != nil }
+
+// SetExtraModels memasang model tambahan dari Panel admin untuk provider name (mis. model
+// dari katalog OpenRouter). Menggantikan daftar tambahan sebelumnya; provider yang tidak
+// aktif diabaikan. Aman dipanggil saat server berjalan.
+func (r *Router) SetExtraModels(name string, text, image []string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if p := r.providers[name]; p != nil {
+		p.extraText, p.extraImage = slices.Clone(text), slices.Clone(image)
+	}
 }
 
 // SetDefaults mengatur model default; nilai kosong / tidak aktif = pilihan pertama.
@@ -311,6 +353,8 @@ func FromConfig(cfg config.Config) *Router {
 		o := NewOpenRouter(p.BaseURL, p.APIKey, cfg.PublicURL, "Racik", timeout)
 		r.Add(&Provider{Name: "openrouter", Label: "OpenRouter", Text: o, Image: o, Edit: o,
 			TextModels: p.TextModels, ImageModels: p.ImageModels, Lister: o, CheckText: true, CheckImages: true})
+		// Katalog /models untuk menambah model dari Panel admin → Konfigurasi AI.
+		r.Catalog = NewCatalog(o)
 	}
 	if p := cfg.HuggingFace; p.APIKey != "" {
 		r.Add(&Provider{Name: "huggingface", Label: "Hugging Face", Image: NewHuggingFace(p.BaseURL, p.APIKey, timeout), ImageModels: p.ImageModels})
