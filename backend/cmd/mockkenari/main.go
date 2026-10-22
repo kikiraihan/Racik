@@ -38,8 +38,33 @@ func main() {
 	http.HandleFunc("/v1/chat/completions", chat)
 	http.HandleFunc("/v1/images/generations", images)
 	http.HandleFunc("/v1/images/edits", images)
+	http.HandleFunc("/v1/models", models)
 	log.Printf("mock kenari.id di %s/v1", addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
+}
+
+// models: tiruan GET /v1/models (publik di kenari), dipilah per "endpoints" — dipakai
+// Panel admin → Katalog model.
+func models(w http.ResponseWriter, r *http.Request) {
+	type m struct {
+		ID        string   `json:"id"`
+		OwnedBy   string   `json:"owned_by"`
+		Endpoints []string `json:"endpoints"`
+	}
+	writeJSON(w, map[string]any{"object": "list", "data": []m{
+		{"claude-sonnet-5-5", "anthropic", []string{"chat"}},
+		{"claude-haiku-5-5", "anthropic", []string{"chat"}},
+		{"gpt-oss-120b", "openai", []string{"chat"}},
+		{"deepseek-v4-flash", "deepseek", []string{"chat"}},
+		{"step-3-7-flash:free", "stepfun", []string{"chat"}},
+		{"step-5-preview:free", "stepfun", []string{"chat"}},
+		{"nemotron-3-super-120b-a12b:free", "nvidia", []string{"chat"}},
+		{"gpt-image-2", "openai", []string{"images"}},
+		{"nano-banana-2", "google", []string{"images"}},
+		{"nano-banana-2-lite", "google", []string{"images"}},
+		{"hunyuan-image-v2.0", "tencent", []string{"images"}},
+		{"tts-1", "openai", []string{"audio"}},
+	}})
 }
 
 func chat(w http.ResponseWriter, r *http.Request) {

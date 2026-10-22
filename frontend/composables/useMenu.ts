@@ -28,6 +28,7 @@ export const ADMIN_NAV: MenuGroup[] = [
   {
     label: 'Konfigurasi',
     items: [
+      { to: '/admin/models', text: 'Katalog model', icon: 'layers' },
       { to: '/admin/ai', text: 'Konfigurasi AI', icon: 'sparkles' },
       { to: '/admin/pricing', text: 'Konfigurasi harga', icon: 'wallet' },
     ],

@@ -47,7 +47,7 @@ Racik adalah web app editor desain (gaya Canva) dengan **AI auto-generate desain
 - **Edit gambar AI**: ubah gambar terpilih dengan instruksi
 - **Copywriting**: 5 alternatif headline/tagline/caption/CTA, atau tulis ulang teks terpilih
 - **Personalisasi**: rating 👍/👎 + masukan, Brand Kit (warna, font, logo, tone of voice) otomatis dipakai AI
-- Pemilihan model teks & gambar lintas provider oleh admin (Panel admin → Konfigurasi AI; daftar model diatur lewat env, model OpenRouter juga bisa ditambah dari katalog)
+- Pemilihan model teks & gambar lintas provider oleh admin (Panel admin → Konfigurasi AI), diambil dari **Katalog model** (halaman terpisah): model env otomatis masuk sebagai bawaan, model OpenRouter & kenari bisa ditambah dari daftar `GET /models` provider
 
 ### Akses public & admin, saldo, system log
 - **Dua akses**: user biasa (public) dan **admin**. Admin ditentukan lewat `ADMIN_EMAILS`; admin lain bisa diangkat dari panel admin.
@@ -61,7 +61,7 @@ Racik adalah web app editor desain (gaya Canva) dengan **AI auto-generate desain
 - **System log ke Elasticsearch** (lihat [System log](#system-log-elasticsearch)): activity user untuk fitur riskan (login/daftar/tamu, hit model AI, aksi admin) dan semua request ke vendor AI. Bisa dicari dari **Panel admin → System log** atau Kibana.
 - **Panel admin** (`/admin`) punya tampilan sendiri, beda dari halaman public: sidebar gelap (bisa diciutkan `Ctrl+\`, jadi drawer di mobile), topbar dengan judul halaman, dan **mode gelap** (terang / gelap / ikut sistem, hanya berlaku di panel admin). Menu:
   - **Ringkasan**: jumlah user, generate AI hari ini, pemakaian saldo & top up 30 hari, desain tersimpan, kepuasan hasil AI, grafik 14 hari, generate per fitur, status sistem (provider AI, model aktif, Elasticsearch, login Google, log server), transaksi saldo terbaru
-  - **Pengguna & saldo**, **Konfigurasi AI**, **Konfigurasi harga**
+  - **Pengguna & saldo**, **Katalog model**, **Konfigurasi AI**, **Konfigurasi harga**
   - **System log** (Elasticsearch) dan **Log server**: 3000 baris log backend terakhir dari memori (access log HTTP, peringatan, error) dengan filter level/sumber, pencarian, live refresh, dan unduh `.txt` — tetap bisa dipakai walaupun Elasticsearch belum diatur (isinya hilang saat backend restart)
 
 ### Lainnya
@@ -188,7 +188,7 @@ Perilaku kenari yang ditangani konektor (`backend/internal/ai/kenari.go`):
 ### Provider AI lain
 
 Selain kenari, backend bisa memakai provider yang juga dipakai katilidev. Provider aktif begitu
-API key-nya diisi; modelnya muncul di dropdown Panel admin → Konfigurasi AI dengan id `<provider>:<model>` (label
+API key-nya diisi; modelnya (yang aktif di Katalog model) muncul di dropdown Panel admin → Konfigurasi AI dengan id `<provider>:<model>` (label
 `model · Provider`). Model default lintas provider diatur dengan `AI_TEXT_MODEL` / `AI_IMAGE_MODEL`
 (mis. `anthropic:claude-sonnet-5-5`); kosong = model kenari, atau model pertama provider aktif
 kalau kenari tidak diisi. Urutan di dropdown: kenari, anthropic, groq, nvidia, agnes, openrouter,
@@ -205,15 +205,32 @@ huggingface, pollinations.
 | Hugging Face | `HUGGINGFACE_API_KEY` | – | ✔ | – | Inference API (`router.huggingface.co`); 503 = model sedang dimuat |
 | Pollinations | `POLLINATIONS_ENABLED=true` | – | ✔ | – | gratis tanpa key |
 
-**Katalog model OpenRouter** (seperti admin → Model AI di tiara): kalau `OPENROUTER_API_KEY` diisi,
-Panel admin → Konfigurasi AI menampilkan katalog `GET /models` OpenRouter (cache 10 menit, tombol
-Muat ulang) lengkap dengan konteks & harga USD sebagai acuan. Admin mencari model lalu menekan
-**Tambah** — model teks / gambar itu langsung masuk ke dropdown pilihan model tanpa mengubah env
-atau restart. Daftar tambahan tersimpan di `app_settings` (key `openrouter_models`) dan dipasang lagi
-saat start; model dari `OPENROUTER_*_MODELS` tetap ada (ditandai `env`). Model yang keluarannya
-gambar dianggap model gambar (dipanggil lewat chat completions, jadi juga bisa untuk edit gambar).
-Endpoint: `GET /api/admin/openrouter/models?kind=text|image&refresh=1`, `PUT /api/admin/openrouter/models`
-dengan body `{"text": [...], "image": [...]}` (setiap id dicek ke katalog).
+**Katalog model** (Panel admin → Katalog model, `/admin/models`; seperti admin → Model AI di tiara &
+katilidev) terpisah dari **Konfigurasi AI** (`/admin/ai`). Katalog = daftar model yang tersedia di
+sistem (tabel `ai_models`, satu baris per provider + jenis + id model); Konfigurasi AI hanya
+menawarkan model katalog yang **aktif** dari provider yang API key-nya diisi.
+
+- **Model bawaan**: model env (`KENARI_*_MODELS`, `OPENROUTER_*_MODELS`, `GROQ_TEXT_MODELS`, …) masuk
+  otomatis ke katalog setiap start (ditandai *bawaan env*). Tidak bisa dihapus — nonaktifkan saja
+  kalau tidak ingin ditawarkan; status pilihan admin tidak ditimpa saat restart. Model yang dihapus
+  dari env menjadi model biasa (boleh dihapus).
+- **Tambah dari daftar provider**: untuk **OpenRouter** dan **kenari** (provider yang API key-nya
+  diisi), katalog membaca `GET /models` provider itu (cache 10 menit, tombol Muat ulang). OpenRouter
+  lengkap dengan konteks & harga USD sebagai acuan; model yang keluarannya gambar dianggap model
+  gambar (dipanggil lewat chat completions, jadi juga bisa untuk edit gambar). Daftar kenari dipilah
+  per kolom `endpoints` (`chat` = teks, `images` = gambar; entri tanpa `endpoints` = teks). Model
+  yang ditambah langsung muncul di Konfigurasi AI tanpa mengubah env atau restart (maks. 100 model
+  per provider & jenis).
+- **Nonaktifkan / hapus**: model nonaktif hilang dari dropdown Konfigurasi AI. Model yang sedang
+  dipilih di Konfigurasi AI tidak bisa dinonaktifkan atau dihapus (pilih model lain dulu).
+- Model OpenRouter tambahan dari versi sebelumnya (`app_settings` key `openrouter_models`) dipindah
+  ke katalog oleh migrasi `004_ai_models.sql`.
+
+Endpoint admin: `GET /api/admin/models` (katalog + daftar provider), `GET /api/admin/models/remote?provider=openrouter|kenari&kind=text|image&refresh=1`,
+`POST /api/admin/models` dengan body `{"provider": "kenari", "kind": "text", "ids": [...]}` (setiap id
+dicek ke daftar provider), `PATCH /api/admin/models/{id}` (`status` active|disabled, `name`, `notes`),
+`DELETE /api/admin/models/{id}`. `cmd/mockkenari` juga melayani `GET /v1/models` untuk mencoba katalog
+kenari tanpa API key.
 
 Edit gambar hanya didukung kenari dan OpenRouter. Kalau model gambar terpilih berasal dari provider
 lain, backend memakai model edit pertama yang tersedia. Saat start, model kenari, Groq, NVIDIA (teks)

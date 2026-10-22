@@ -276,7 +276,7 @@ func TestRouterFromConfig(t *testing.T) {
 	}
 }
 
-func TestOpenRouterCatalogAndExtraModels(t *testing.T) {
+func TestOpenRouterCatalogAndCatalogModels(t *testing.T) {
 	hits := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hits++
@@ -291,32 +291,78 @@ func TestOpenRouterCatalogAndExtraModels(t *testing.T) {
 	defer srv.Close()
 
 	r := FromConfig(config.Config{AITimeoutSec: 5, OpenRouter: config.Provider{APIKey: "k", BaseURL: srv.URL, ImageModels: []string{"flux"}}})
-	if r.Catalog == nil {
+	cat := r.Catalogs["openrouter"]
+	if cat == nil {
 		t.Fatal("katalog OpenRouter tidak dibuat")
 	}
-	text, err := r.Catalog.Models(context.Background(), KindText, false)
+	text, err := cat.Models(context.Background(), KindText, false)
 	if err != nil || len(text) != 2 || text[0].ID != "meta/llama:free" || !text[0].IsFree {
 		t.Fatalf("katalog teks: %+v %v", text, err)
 	}
 	if p := text[1].PromptPrice; p == nil || *p != 1.25 {
 		t.Fatalf("harga per 1 juta token: %v", p)
 	}
-	if m, _ := r.Catalog.Find(context.Background(), "google/gemini-3-flash-image"); m == nil || m.Kind != KindImage || *m.ImagePrice != 0.039 {
+	if m, _ := cat.Find(context.Background(), KindImage, "google/gemini-3-flash-image"); m == nil || m.Maker != "google" || *m.ImagePrice != 0.039 {
 		t.Fatalf("model gambar: %+v", m)
 	}
 	if hits != 1 {
 		t.Fatalf("katalog harus di-cache, hit = %d", hits)
 	}
 
-	r.SetExtraModels("openrouter", []string{"openai/gpt-5"}, []string{"flux", "google/gemini-3-flash-image"})
+	// Sebelum katalog dipasang: model env. Sesudahnya: hanya model katalog yang aktif.
+	if got := r.ImageChoices(); !slices.Equal(got, []string{"openrouter:flux"}) {
+		t.Fatalf("pilihan gambar env: %v", got)
+	}
+	r.SetCatalog(map[string]CatalogModels{"openrouter": {Text: []string{"openai/gpt-5"}, Image: []string{"flux", "google/gemini-3-flash-image"}}})
 	if got := r.TextChoices(); !slices.Equal(got, []string{"openrouter:openai/gpt-5"}) {
 		t.Fatalf("pilihan teks: %v", got)
 	}
 	if got := r.EditChoices(); !slices.Equal(got, []string{"openrouter:flux", "openrouter:google/gemini-3-flash-image"}) {
 		t.Fatalf("pilihan edit: %v", got)
 	}
-	r.SetExtraModels("openrouter", nil, nil)
-	if r.Configured() {
-		t.Fatal("model tambahan harus bisa dihapus")
+	// Model env yang dinonaktifkan di katalog ikut hilang dari pilihan.
+	r.SetCatalog(map[string]CatalogModels{})
+	if r.Configured() || len(r.ImageChoices()) != 0 {
+		t.Fatal("model katalog harus bisa dihapus / dinonaktifkan")
+	}
+	r.SetCatalog(nil)
+	if got := r.ImageChoices(); !slices.Equal(got, []string{"openrouter:flux"}) {
+		t.Fatalf("katalog nil harus kembali ke env: %v", got)
+	}
+}
+
+func TestKenariCatalog(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"data":[{"id":"gpt-image-2","owned_by":"openai","endpoints":["images"]},
+			{"id":"step-3-7-flash:free","endpoints":["chat"]},{"id":"kenari/auto"},{"id":"tts-1","endpoints":["audio"]},
+			{"id":"omni","endpoints":["chat","images"]}]}`))
+	}))
+	defer srv.Close()
+
+	// Tanpa API key: kenari tidak punya katalog dan modelnya tidak ditawarkan.
+	cfg := config.Config{AITimeoutSec: 5, KenariBaseURL: srv.URL, KenariTextModels: []string{"step-3-7-flash:free"}}
+	if r := FromConfig(cfg); r.Catalogs["kenari"] != nil || len(r.TextChoices()) != 0 || r.Providers()[0].Active {
+		t.Fatal("kenari tanpa key tidak boleh aktif")
+	}
+	cfg.KenariAPIKey = "k"
+	r := FromConfig(cfg)
+	cat := r.Catalogs["kenari"]
+	if cat == nil {
+		t.Fatal("katalog kenari tidak dibuat")
+	}
+	text, err := cat.Models(context.Background(), KindText, false)
+	if err != nil || len(text) != 3 || text[0].ID != "kenari/auto" || text[2].ID != "step-3-7-flash:free" || !text[2].IsFree {
+		t.Fatalf("katalog teks kenari: %+v %v", text, err)
+	}
+	img, _ := cat.Models(context.Background(), KindImage, false)
+	if len(img) != 2 || img[0].ID != "gpt-image-2" || img[0].Maker != "openai" {
+		t.Fatalf("katalog gambar kenari: %+v", img)
+	}
+	if m, _ := cat.Find(context.Background(), KindImage, "step-3-7-flash:free"); m != nil {
+		t.Fatal("model teks tidak boleh ditemukan sebagai model gambar")
+	}
+	p := r.Providers()[0]
+	if p.Name != "kenari" || !p.Active || !p.Catalog || !slices.Equal(p.EnvText, []string{"step-3-7-flash:free"}) {
+		t.Fatalf("info provider: %+v", p)
 	}
 }

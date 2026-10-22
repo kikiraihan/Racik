@@ -31,6 +31,7 @@ async function load() {
 }
 onMounted(load)
 // load dipanggil ulang dari halaman setelah model OpenRouter ditambah/dihapus.
+// (Sekarang katalog ada di halaman sendiri, /admin/models; dropdown dimuat saat halaman dibuka.)
 defineExpose({ load })
 
 async function save() {
@@ -61,6 +62,8 @@ const FIELDS = [
       <p class="muted small" style="margin: 0">
         User tidak bisa memilih atau melihat model yang dipakai. API key provider tetap disimpan di env backend (tidak lewat browser);
         daftar model di bawah berasal dari provider yang API key-nya diisi.
+        Pilihannya diambil dari <NuxtLink to="/admin/models" class="lnk">Katalog model</NuxtLink> — hanya model yang aktif di sana yang muncul;
+        tambah atau nonaktifkan model lewat halaman itu.
       </p>
       <div v-for="f in FIELDS" :key="f.key" class="field">
         <div>
@@ -84,6 +87,7 @@ const FIELDS = [
 </template>
 
 <style scoped>
+.lnk { color: var(--accent); font-weight: 600; }
 .field { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; align-items: start; padding: 12px 0; border-top: 1px solid var(--line); }
 @media (max-width: 720px) { .field { grid-template-columns: 1fr; gap: 8px; } }
 </style>

@@ -92,16 +92,20 @@ func (s *Server) Routes() http.Handler {
 	// Saldo user
 	mux.HandleFunc("GET /api/wallet", auth(s.wallet))
 
-	// Admin: user & saldo, konfigurasi AI, konfigurasi harga, system log
+	// Admin: user & saldo, katalog model, konfigurasi AI, konfigurasi harga, system log
 	mux.HandleFunc("GET /api/admin/users", admin(s.adminListUsers))
 	mux.HandleFunc("PATCH /api/admin/users/{id}", track("admin.user_role", admin(s.adminUpdateUser)))
 	mux.HandleFunc("POST /api/admin/users/{id}/balance", track("admin.balance", admin(s.adminAdjustBalance)))
 	mux.HandleFunc("GET /api/admin/users/{id}/transactions", admin(s.adminUserTx))
 	mux.HandleFunc("GET /api/admin/ai-config", admin(s.adminGetAIConfig))
 	mux.HandleFunc("PUT /api/admin/ai-config", track("admin.ai_config", admin(s.adminPutAIConfig)))
-	// Katalog model OpenRouter: admin menambah model teks/gambar tanpa ubah env (openrouter.go).
-	mux.HandleFunc("GET /api/admin/openrouter/models", admin(s.adminOpenRouterCatalog))
-	mux.HandleFunc("PUT /api/admin/openrouter/models", track("admin.openrouter_models", admin(s.adminPutOpenRouterModels)))
+	// Katalog model: model yang tersedia di sistem, ditambah dari daftar OpenRouter / kenari
+	// tanpa ubah env (catalog.go). Konfigurasi AI hanya menawarkan model katalog yang aktif.
+	mux.HandleFunc("GET /api/admin/models", admin(s.adminListModels))
+	mux.HandleFunc("GET /api/admin/models/remote", admin(s.adminRemoteModels))
+	mux.HandleFunc("POST /api/admin/models", track("admin.models_add", admin(s.adminAddModels)))
+	mux.HandleFunc("PATCH /api/admin/models/{id}", track("admin.model_update", admin(s.adminUpdateModel)))
+	mux.HandleFunc("DELETE /api/admin/models/{id}", track("admin.model_delete", admin(s.adminDeleteModel)))
 	mux.HandleFunc("GET /api/admin/pricing", admin(s.adminGetPricing))
 	mux.HandleFunc("PUT /api/admin/pricing", track("admin.pricing", admin(s.adminPutPricing)))
 	mux.HandleFunc("GET /api/admin/logs", admin(s.adminLogs))
