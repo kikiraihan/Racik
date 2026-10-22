@@ -72,7 +72,7 @@ type Client struct {
 
 // NewOpenAI membuat klien untuk provider OpenAI-compatible.
 func NewOpenAI(name, baseURL, apiKey string, timeout time.Duration) *Client {
-	return &Client{Name: name, BaseURL: strings.TrimRight(baseURL, "/"), APIKey: apiKey, HTTP: &http.Client{Timeout: timeout}}
+	return &Client{Name: name, BaseURL: strings.TrimRight(baseURL, "/"), APIKey: apiKey, HTTP: newHTTPClient(timeout)}
 }
 
 // ErrNotConfigured dibungkus oleh error "<PROVIDER>_API_KEY belum diisi" — cek dengan errors.Is.
@@ -461,7 +461,8 @@ func (c *Client) decodeImage(ctx context.Context, b64, url string) (*Image, erro
 		}
 		return c.decodeImage(ctx, b64, "")
 	}
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	// Unduhan gambar hasil bukan panggilan API AI, tidak masuk AI API Call Log.
+	req, _ := http.NewRequestWithContext(withoutCallLog(ctx), http.MethodGet, url, nil)
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return nil, err

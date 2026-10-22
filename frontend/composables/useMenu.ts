@@ -37,6 +37,7 @@ export const ADMIN_NAV: MenuGroup[] = [
     label: 'Monitoring',
     items: [
       { to: '/admin/logs', text: 'System log', icon: 'activity' },
+      { to: '/admin/ai-calls', text: 'AI API Call Log', icon: 'gauge' },
       { to: '/admin/server-log', text: 'Log server', icon: 'terminal' },
     ],
   },

@@ -91,6 +91,11 @@ type Router struct {
 	// Observe dipanggil setelah setiap request ke vendor AI (untuk log vendor). Opsional.
 	Observe func(ctx context.Context, c Call)
 
+	// Recorder menerima setiap request HTTP ke vendor AI untuk AI API Call Log (calllog.go).
+	// Opsional; LogBodies = simpan ringkasan body request & response.
+	Recorder  CallRecorder
+	LogBodies bool
+
 	// Catalogs: daftar model dari API provider untuk Panel admin → Katalog model, per nama
 	// provider (openrouter, kenari). Provider yang tidak aktif tidak punya entri.
 	Catalogs map[string]*Catalog
@@ -290,6 +295,7 @@ func (r *Router) Chat(ctx context.Context, choice string, msgs []Message, maxTok
 	defer func(start time.Time) {
 		r.observe(ctx, Call{Choice: choice, Operation: "chat", Prompt: lastUserText(msgs), Err: err, OutBytes: len(text)}, start)
 	}(time.Now())
+	ctx = r.withCallScope(ctx, choice, "chat")
 	p, model, err := r.provider(choice)
 	if err != nil {
 		return "", err
@@ -304,6 +310,7 @@ func (r *Router) GenerateImage(ctx context.Context, choice, prompt string, width
 	defer func(start time.Time) {
 		r.observe(ctx, Call{Choice: choice, Operation: "image", Prompt: prompt, Err: err, OutBytes: imageSize(img)}, start)
 	}(time.Now())
+	ctx = r.withCallScope(ctx, choice, "image")
 	p, model, err := r.provider(choice)
 	if err != nil {
 		return nil, err
@@ -318,6 +325,7 @@ func (r *Router) EditImage(ctx context.Context, choice, prompt string, src *Imag
 	defer func(start time.Time) {
 		r.observe(ctx, Call{Choice: choice, Operation: "edit", Prompt: prompt, Err: err, OutBytes: imageSize(img)}, start)
 	}(time.Now())
+	ctx = r.withCallScope(ctx, choice, "edit")
 	p, model, err := r.provider(choice)
 	if err != nil {
 		return nil, err

@@ -21,6 +21,9 @@ type Server struct {
 	Log *applog.Logger // system log: activity user & request ke vendor AI (Elasticsearch)
 	// ServerLog: baris log server terakhir di memori (menu Log server di panel admin).
 	ServerLog *applog.Ring
+	// AICalls: AI API Call Log di PostgreSQL (menu AI API Call Log di panel admin), lihat
+	// admin_ai_calls.go. nil = tidak dicatat.
+	AICalls *applog.APICalls
 
 	Google *auth.GoogleVerifier // verifikasi ID token untuk login Google
 }
@@ -29,6 +32,9 @@ func New(db *sql.DB, cfg config.Config, logger *applog.Logger) *Server {
 	_ = os.MkdirAll(cfg.UploadDir, 0o755)
 	s := &Server{DB: db, Cfg: cfg, AI: ai.FromConfig(cfg), Log: logger, Google: auth.NewGoogleVerifier(cfg.GoogleClientIDs)}
 	s.AI.Observe = s.logVendorCall
+	// Setiap request HTTP ke vendor AI juga dicatat ke AI API Call Log (RecordCall).
+	s.AI.Recorder = s
+	s.AI.LogBodies = cfg.AICallLogBodies
 	return s
 }
 
@@ -111,6 +117,11 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/admin/logs", admin(s.adminLogs))
 	mux.HandleFunc("GET /api/admin/overview", admin(s.adminOverview))
 	mux.HandleFunc("GET /api/admin/server-logs", admin(s.adminServerLogs))
+	// AI API Call Log: setiap request HTTP ke vendor AI (admin_ai_calls.go)
+	mux.HandleFunc("GET /api/admin/ai-calls", admin(s.adminListAICalls))
+	mux.HandleFunc("GET /api/admin/ai-calls/summary", admin(s.adminAICallSummary))
+	mux.HandleFunc("GET /api/admin/ai-calls/{id}", admin(s.adminGetAICall))
+	mux.HandleFunc("POST /api/admin/ai-calls/delete", track("admin.ai_calls_delete", admin(s.adminDeleteAICalls)))
 
 	// File statis hasil upload / AI
 	files := http.StripPrefix("/uploads/", http.FileServer(http.Dir(filepath.Clean(s.Cfg.UploadDir))))

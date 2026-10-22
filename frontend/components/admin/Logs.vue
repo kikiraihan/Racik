@@ -14,7 +14,7 @@ const loading = ref(false)
 const open = ref<any>(null)
 
 const ACTIONS = {
-  activity: ['auth.login', 'auth.register', 'auth.guest', 'auth.upgrade', 'ai.design', 'ai.refine', 'ai.image', 'ai.image_edit', 'ai.copy', 'admin.balance', 'admin.user_role', 'admin.ai_config', 'admin.pricing'],
+  activity: ['auth.login', 'auth.register', 'auth.guest', 'auth.upgrade', 'ai.design', 'ai.refine', 'ai.image', 'ai.image_edit', 'ai.copy', 'admin.balance', 'admin.user_role', 'admin.ai_config', 'admin.pricing', 'admin.ai_calls_delete'],
   vendor: ['chat', 'image', 'edit'],
 }
 

@@ -286,6 +286,7 @@ func TestOpenRouterCatalogAndCatalogModels(t *testing.T) {
 			{"id":"google/gemini-3-flash-image","name":"Nano Banana","pricing":{"prompt":"0.0000003","completion":"0.0000025","image":"0.039"},
 				"architecture":{"output_modalities":["image","text"]}},
 			{"id":"x/tts","architecture":{"output_modalities":["audio"]}},
+			{"id":"anthropic/claude-sonnet-5.5:batch","architecture":{"output_modalities":["text"]}},
 			{"id":"meta/llama:free","pricing":{"prompt":"0","completion":"0"}}]}`))
 	}))
 	defer srv.Close()

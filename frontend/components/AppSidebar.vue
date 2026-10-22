@@ -43,7 +43,8 @@ watch(() => route.fullPath, () => {
 })
 
 function isActive(item: MenuItem) {
-  return item.exact ? route.path === item.to : route.path.startsWith(item.to)
+  // Cocokkan per segmen path supaya /admin/ai tidak ikut aktif di /admin/ai-calls.
+  return item.exact ? route.path === item.to : route.path === item.to || route.path.startsWith(item.to + '/')
 }
 
 function openCreate() {

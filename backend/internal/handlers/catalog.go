@@ -115,6 +115,10 @@ func (s *Server) applyCatalog(ctx context.Context) error {
 		if err := rows.Scan(&provider, &kind, &id); err != nil {
 			return err
 		}
+		// Varian :batch tidak bisa dipakai lewat chat/completions — jangan ditawarkan.
+		if ai.ChatUnsupported(id) {
+			continue
+		}
 		m := models[provider]
 		if kind == ai.KindImage {
 			m.Image = append(m.Image, id)
