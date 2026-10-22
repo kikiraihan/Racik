@@ -62,6 +62,8 @@ func main() {
 
 	api := handlers.New(conn, cfg, logger)
 	api.ServerLog = serverLog
+	// Model OpenRouter tambahan yang dipilih admin dari katalog (tersimpan di database).
+	api.ApplyOpenRouterModels(ctx)
 	srv := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           api.Routes(),

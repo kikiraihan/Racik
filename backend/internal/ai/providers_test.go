@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -272,5 +273,50 @@ func TestRouterFromConfig(t *testing.T) {
 	empty := FromConfig(config.Config{AITimeoutSec: 5, KenariTextModel: "x"})
 	if _, err := empty.Chat(context.Background(), empty.DefaultText(), nil, 10); err == nil || !strings.Contains(err.Error(), "KENARI_API_KEY") {
 		t.Fatalf("tanpa provider: %v", err)
+	}
+}
+
+func TestOpenRouterCatalogAndExtraModels(t *testing.T) {
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		w.Write([]byte(`{"data":[
+			{"id":"openai/gpt-5","name":"GPT-5","context_length":400000,"pricing":{"prompt":"0.00000125","completion":"0.00001"},
+				"architecture":{"input_modalities":["text","image"],"output_modalities":["text"]}},
+			{"id":"google/gemini-3-flash-image","name":"Nano Banana","pricing":{"prompt":"0.0000003","completion":"0.0000025","image":"0.039"},
+				"architecture":{"output_modalities":["image","text"]}},
+			{"id":"x/tts","architecture":{"output_modalities":["audio"]}},
+			{"id":"meta/llama:free","pricing":{"prompt":"0","completion":"0"}}]}`))
+	}))
+	defer srv.Close()
+
+	r := FromConfig(config.Config{AITimeoutSec: 5, OpenRouter: config.Provider{APIKey: "k", BaseURL: srv.URL, ImageModels: []string{"flux"}}})
+	if r.Catalog == nil {
+		t.Fatal("katalog OpenRouter tidak dibuat")
+	}
+	text, err := r.Catalog.Models(context.Background(), KindText, false)
+	if err != nil || len(text) != 2 || text[0].ID != "meta/llama:free" || !text[0].IsFree {
+		t.Fatalf("katalog teks: %+v %v", text, err)
+	}
+	if p := text[1].PromptPrice; p == nil || *p != 1.25 {
+		t.Fatalf("harga per 1 juta token: %v", p)
+	}
+	if m, _ := r.Catalog.Find(context.Background(), "google/gemini-3-flash-image"); m == nil || m.Kind != KindImage || *m.ImagePrice != 0.039 {
+		t.Fatalf("model gambar: %+v", m)
+	}
+	if hits != 1 {
+		t.Fatalf("katalog harus di-cache, hit = %d", hits)
+	}
+
+	r.SetExtraModels("openrouter", []string{"openai/gpt-5"}, []string{"flux", "google/gemini-3-flash-image"})
+	if got := r.TextChoices(); !slices.Equal(got, []string{"openrouter:openai/gpt-5"}) {
+		t.Fatalf("pilihan teks: %v", got)
+	}
+	if got := r.EditChoices(); !slices.Equal(got, []string{"openrouter:flux", "openrouter:google/gemini-3-flash-image"}) {
+		t.Fatalf("pilihan edit: %v", got)
+	}
+	r.SetExtraModels("openrouter", nil, nil)
+	if r.Configured() {
+		t.Fatal("model tambahan harus bisa dihapus")
 	}
 }

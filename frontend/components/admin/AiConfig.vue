@@ -30,6 +30,8 @@ async function load() {
   }
 }
 onMounted(load)
+// load dipanggil ulang dari halaman setelah model OpenRouter ditambah/dihapus.
+defineExpose({ load })
 
 async function save() {
   saving.value = true

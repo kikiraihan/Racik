@@ -47,7 +47,7 @@ Racik adalah web app editor desain (gaya Canva) dengan **AI auto-generate desain
 - **Edit gambar AI**: ubah gambar terpilih dengan instruksi
 - **Copywriting**: 5 alternatif headline/tagline/caption/CTA, atau tulis ulang teks terpilih
 - **Personalisasi**: rating 👍/👎 + masukan, Brand Kit (warna, font, logo, tone of voice) otomatis dipakai AI
-- Pemilihan model teks & gambar lintas provider oleh admin (Panel admin → Konfigurasi AI; daftar model diatur lewat env)
+- Pemilihan model teks & gambar lintas provider oleh admin (Panel admin → Konfigurasi AI; daftar model diatur lewat env, model OpenRouter juga bisa ditambah dari katalog)
 
 ### Akses public & admin, saldo, system log
 - **Dua akses**: user biasa (public) dan **admin**. Admin ditentukan lewat `ADMIN_EMAILS`; admin lain bisa diangkat dari panel admin.
@@ -204,6 +204,16 @@ huggingface, pollinations.
 | OpenRouter | `OPENROUTER_API_KEY` | ✔* | ✔ | ✔ | gambar & edit lewat chat completions (`modalities`); *isi `OPENROUTER_TEXT_MODELS` untuk teks |
 | Hugging Face | `HUGGINGFACE_API_KEY` | – | ✔ | – | Inference API (`router.huggingface.co`); 503 = model sedang dimuat |
 | Pollinations | `POLLINATIONS_ENABLED=true` | – | ✔ | – | gratis tanpa key |
+
+**Katalog model OpenRouter** (seperti admin → Model AI di tiara): kalau `OPENROUTER_API_KEY` diisi,
+Panel admin → Konfigurasi AI menampilkan katalog `GET /models` OpenRouter (cache 10 menit, tombol
+Muat ulang) lengkap dengan konteks & harga USD sebagai acuan. Admin mencari model lalu menekan
+**Tambah** — model teks / gambar itu langsung masuk ke dropdown pilihan model tanpa mengubah env
+atau restart. Daftar tambahan tersimpan di `app_settings` (key `openrouter_models`) dan dipasang lagi
+saat start; model dari `OPENROUTER_*_MODELS` tetap ada (ditandai `env`). Model yang keluarannya
+gambar dianggap model gambar (dipanggil lewat chat completions, jadi juga bisa untuk edit gambar).
+Endpoint: `GET /api/admin/openrouter/models?kind=text|image&refresh=1`, `PUT /api/admin/openrouter/models`
+dengan body `{"text": [...], "image": [...]}` (setiap id dicek ke katalog).
 
 Edit gambar hanya didukung kenari dan OpenRouter. Kalau model gambar terpilih berasal dari provider
 lain, backend memakai model edit pertama yang tersedia. Saat start, model kenari, Groq, NVIDIA (teks)

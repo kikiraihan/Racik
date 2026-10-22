@@ -99,6 +99,9 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/admin/users/{id}/transactions", admin(s.adminUserTx))
 	mux.HandleFunc("GET /api/admin/ai-config", admin(s.adminGetAIConfig))
 	mux.HandleFunc("PUT /api/admin/ai-config", track("admin.ai_config", admin(s.adminPutAIConfig)))
+	// Katalog model OpenRouter: admin menambah model teks/gambar tanpa ubah env (openrouter.go).
+	mux.HandleFunc("GET /api/admin/openrouter/models", admin(s.adminOpenRouterCatalog))
+	mux.HandleFunc("PUT /api/admin/openrouter/models", track("admin.openrouter_models", admin(s.adminPutOpenRouterModels)))
 	mux.HandleFunc("GET /api/admin/pricing", admin(s.adminGetPricing))
 	mux.HandleFunc("PUT /api/admin/pricing", track("admin.pricing", admin(s.adminPutPricing)))
 	mux.HandleFunc("GET /api/admin/logs", admin(s.adminLogs))
