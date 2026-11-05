@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Racik — Teaser</title>
+<!--
+  Sumber video teaser. Setiap frame ditentukan murni oleh waktu t (detik) lewat window.seek(t),
+  jadi render.js bisa memotret frame demi frame secara deterministik (tanpa requestAnimationFrame).
+  Buka langsung di browser untuk pratinjau: animasi berjalan otomatis bila tidak ada ?render.
+-->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: #f4f4f6; }
+  body { font-family: "Inter", system-ui, sans-serif; color: #1d1d1f; -webkit-font-smoothing: antialiased; }
+  #stage { position: absolute; inset: 0; overflow: hidden; }
+
+  .bg { position: absolute; inset: -20%; filter: blur(110px); }
+  .blob { position: absolute; border-radius: 50%; opacity: .35; }
+  .b1 { width: 900px; height: 900px; background: #ffb38a; }
+  .b2 { width: 800px; height: 800px; background: #a5b4fc; }
+  .b3 { width: 700px; height: 700px; background: #86efac; opacity: .25; }
+
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  .title { position: absolute; left: 0; right: 0; text-align: center; font-family: "Inter Display", "Inter", sans-serif;
+           font-weight: 800; letter-spacing: -0.035em; }
+  .sub { position: absolute; left: 0; right: 0; text-align: center; font-weight: 500; color: #6e6e73; }
+  .caption { position: absolute; left: 0; right: 0; text-align: center; font-family: "Inter Display", "Inter", sans-serif;
+             font-weight: 800; font-size: 70px; letter-spacing: -0.035em; line-height: 1.08; }
+  .caption small { display: block; font-family: "Inter", sans-serif; font-weight: 500; font-size: 30px; letter-spacing: 0;
+                   color: #6e6e73; margin-top: 14px; }
+
+  /* Logo Racik: kotak hitam dengan huruf R */
+  .logo { position: absolute; width: 200px; height: 200px; border-radius: 48px; background: #111; color: #fff;
+          display: grid; place-items: center; font-weight: 800; font-size: 120px; letter-spacing: -0.04em;
+          box-shadow: 0 40px 100px rgba(0,0,0,.25); }
+
+  /* Kotak prompt (meniru beranda racik.katili.dev) */
+  .prompt { position: absolute; left: 260px; top: 300px; width: 1400px; border-radius: 28px; background: #fff;
+            border: 1px solid #e3e3e8; box-shadow: 0 30px 90px rgba(0,0,0,.10); overflow: hidden; }
+  .prompt .ta { height: 170px; padding: 34px 40px; font-size: 34px; line-height: 1.4; color: #1d1d1f; }
+  .prompt .ta.ph { color: #a1a1a6; }
+  .caret { display: inline-block; width: 3px; height: 38px; background: #111; vertical-align: -6px; margin-left: 2px; }
+  .prompt .opts { display: flex; align-items: center; gap: 16px; padding: 0 40px 28px; font-size: 24px; color: #6e6e73; }
+  .prompt .box { border: 1px solid #d8d8de; border-radius: 12px; padding: 10px 18px; color: #1d1d1f; }
+  .prompt .chk { width: 26px; height: 26px; border-radius: 6px; background: #111; color: #fff; font-size: 18px; display: grid; place-items: center; }
+  .gen { margin-left: auto; height: 64px; padding: 0 30px; border-radius: 14px; background: #111; color: #fff; font-size: 26px;
+         font-weight: 600; display: flex; align-items: center; gap: 12px; }
+  .prompt .chips { display: flex; gap: 12px; padding: 20px 30px; background: #f5f5f7; border-top: 1px solid #ececf0; }
+  .chip { padding: 10px 20px; border-radius: 999px; border: 1px solid #dcdce0; background: #fff; font-size: 22px; font-weight: 500; }
+  .chip.on { background: #111; color: #fff; border-color: #111; }
+
+  /* Poster hasil AI (600×600, diskalakan lewat wrapper) */
+  .pw { position: absolute; width: 600px; height: 600px; transform-origin: 0 0; }
+  .poster { position: absolute; inset: 0; border-radius: 22px; overflow: hidden; background: var(--bg); color: var(--ink);
+            box-shadow: 0 30px 80px rgba(0,0,0,.18); }
+  .poster .circ { position: absolute; border-radius: 50%; background: var(--acc); opacity: .35; }
+  .poster .ptag { position: absolute; left: 48px; top: 52px; font-size: 18px; font-weight: 700; letter-spacing: .22em; opacity: .8; }
+  .poster .ph1 { position: absolute; left: 44px; top: 96px; font-family: "Inter Display", "Inter", sans-serif; font-weight: 900;
+                 font-size: 76px; line-height: .98; letter-spacing: -0.04em; text-transform: uppercase; }
+  .poster .pdisc { position: absolute; left: 48px; top: 300px; padding: 12px 22px; border-radius: 14px; background: var(--acc);
+                   color: var(--bg); font-size: 26px; font-weight: 700; }
+  .poster .pdisc b { font-size: 40px; font-weight: 900; }
+  .poster .pfoot { position: absolute; left: 48px; bottom: 44px; font-size: 20px; font-weight: 600; opacity: .8; }
+  .cup { position: absolute; right: 54px; bottom: 60px; width: 190px; height: 250px; }
+  .cup .glass { position: absolute; left: 0; right: 0; bottom: 0; height: 220px; border-radius: 18px 18px 40px 40px;
+                background: linear-gradient(#f3e3c8 0 18%, #c88a52 18% 55%, #6b3e1f 55%); border: 6px solid rgba(255,255,255,.75); }
+  .cup .lid { position: absolute; left: -10px; right: -10px; top: 18px; height: 22px; border-radius: 12px; background: rgba(255,255,255,.9); }
+  .cup .straw { position: absolute; left: 110px; top: -30px; width: 14px; height: 90px; border-radius: 7px; background: var(--acc); transform: rotate(12deg); }
+  .pA { --bg: #3b2416; --ink: #fbe9d0; --acc: #f59e42; }
+  .pB { --bg: #fdf3e4; --ink: #3b2416; --acc: #d9622b; }
+  .pC { --bg: #12372a; --ink: #eef7ee; --acc: #f2c14e; }
+  .shim { position: absolute; width: 420px; height: 420px; border-radius: 22px; overflow: hidden;
+          background: linear-gradient(100deg, #ececf0 30%, #fafafa 50%, #ececf0 70%); background-size: 300% 100%; }
+  .spark { position: absolute; left: 0; right: 0; text-align: center; font-size: 30px; font-weight: 600; color: #6e6e73; }
+
+  /* Editor tiruan */
+  .editor { position: absolute; left: 140px; top: 250px; width: 1640px; height: 780px; border-radius: 26px; background: #fbfbfc;
+            border: 1px solid #e3e3e8; box-shadow: 0 40px 120px rgba(0,0,0,.14); overflow: hidden; }
+  .ed-left { position: absolute; left: 0; top: 0; bottom: 0; width: 320px; border-right: 1px solid #ececf0; background: #fff; padding: 28px 22px; }
+  .ed-right { position: absolute; right: 0; top: 0; bottom: 0; width: 340px; border-left: 1px solid #ececf0; background: #fff; padding: 28px 24px; }
+  .ed-h { font-size: 18px; font-weight: 700; color: #8e8e93; letter-spacing: .08em; margin: 6px 4px 14px; }
+  .layer { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; font-size: 21px; margin-bottom: 4px; }
+  .layer i { width: 28px; height: 28px; border-radius: 7px; background: #ececf0; display: grid; place-items: center; font-style: normal; font-size: 15px; font-weight: 700; color: #6e6e73; }
+  .layer.on { background: #111; color: #fff; }
+  .layer.on i { background: #333; color: #fff; }
+  .prop { font-size: 20px; color: #6e6e73; margin: 18px 4px 10px; }
+  .field { border: 1px solid #e3e3e8; border-radius: 12px; padding: 12px 16px; font-size: 21px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+  .sw { display: flex; gap: 12px; flex-wrap: wrap; }
+  .sw span { width: 48px; height: 48px; border-radius: 12px; border: 1px solid rgba(0,0,0,.1); }
+  .sw span.on { outline: 3px solid #111; outline-offset: 3px; }
+  .aibar { position: absolute; left: 400px; bottom: 26px; width: 820px; height: 70px; border-radius: 18px; background: #fff;
+           border: 1px solid #e3e3e8; box-shadow: 0 12px 40px rgba(0,0,0,.08); display: flex; align-items: center; gap: 14px;
+           padding: 0 22px; font-size: 22px; color: #a1a1a6; }
+  .aibar b { color: #1d1d1f; font-weight: 600; }
+  .sel { position: absolute; border: 3px solid #5b5bf6; border-radius: 4px; opacity: 0; z-index: 5; pointer-events: none; }
+  .sel i { position: absolute; width: 16px; height: 16px; background: #fff; border: 3px solid #5b5bf6; border-radius: 4px; }
+
+  .cursor { position: absolute; width: 44px; height: 44px; z-index: 9; opacity: 0; filter: drop-shadow(0 4px 8px rgba(0,0,0,.3)); }
+  .ring { position: absolute; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; border: 3px solid rgba(91,91,246,.7);
+          opacity: 0; z-index: 8; }
+
+  /* Export */
+  .file { position: absolute; width: 200px; height: 240px; border-radius: 22px; background: #fff; border: 1px solid #e3e3e8;
+          box-shadow: 0 24px 60px rgba(0,0,0,.12); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; opacity: 0; }
+  .file .ext { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; padding: 10px 18px; border-radius: 12px; color: #fff; }
+  .file small { font-size: 20px; color: #6e6e73; font-weight: 500; }
+
+  .shot { position: absolute; border-radius: 24px; overflow: hidden; box-shadow: 0 50px 140px rgba(0,0,0,.22); border: 1px solid #ddd; }
+  .shot img { display: block; width: 100%; height: auto; }
+
+  .features { position: absolute; left: 50%; top: 420px; width: 1520px; transform: translateX(-50%);
+              display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  .feat { padding: 34px 36px; border-radius: 28px; background: rgba(255,255,255,.85); border: 1px solid #e3e3e8; opacity: 0;
+          box-shadow: 0 16px 40px rgba(0,0,0,.05); }
+  .feat .e { font-size: 46px; margin-bottom: 18px; }
+  .feat h3 { font-size: 34px; font-weight: 700; letter-spacing: -0.015em; }
+  .feat p { font-size: 24px; color: #6e6e73; margin-top: 8px; line-height: 1.35; }
+  .badge { position: absolute; left: 0; right: 0; margin: 0 auto; width: fit-content; padding: 14px 30px; border-radius: 999px;
+           background: #111; color: #fff; font-size: 28px; font-weight: 600; white-space: nowrap; }
+  .fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 20; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="bg"><div class="blob b1" id="b1"></div><div class="blob b2" id="b2"></div><div class="blob b3" id="b3"></div></div>
+
+  <!-- 1. Pembuka -->
+  <section class="scene" id="s1">
+    <div class="logo" id="s1logo" style="left:860px; top:270px">R</div>
+    <div class="title" id="s1title" style="top:520px; font-size:150px">Racik</div>
+    <div class="sub" id="s1sub" style="top:715px; font-size:44px">Tulis idemu. AI menyusun desainnya.</div>
+  </section>
+
+  <!-- 2. Prompt → desain -->
+  <section class="scene" id="s2">
+    <div class="caption" id="s2cap" style="top:80px">Satu prompt, desain jadi.<small>Layout, copy, palet, font, dan gambar — disusun AI.</small></div>
+    <div class="prompt" id="s2prompt">
+      <div class="ta" id="s2ta"></div>
+      <div class="opts">
+        <span>Slide</span><span class="box">3</span><span class="box">Gaya: otomatis ▾</span>
+        <span class="chk">✓</span><span style="color:#1d1d1f">Buat gambar AI</span>
+        <div class="gen" id="s2gen"><span>✦</span>Generate desain</div>
+      </div>
+      <div class="chips"><span class="chip">Presentasi</span><span class="chip on">Instagram</span><span class="chip">Story</span>
+        <span class="chip">Poster</span><span class="chip">Thumbnail</span><span class="chip">Banner</span><span class="chip">Sertifikat</span></div>
+    </div>
+    <div class="spark" id="s2spark" style="top:330px">✦ AI sedang meracik desainmu…</div>
+    <div class="shim" id="sh1" style="left:270px; top:420px"></div>
+    <div class="shim" id="sh2" style="left:750px; top:420px"></div>
+    <div class="shim" id="sh3" style="left:1230px; top:420px"></div>
+    <div class="pw" id="s2p1" style="left:270px; top:420px"></div>
+    <div class="pw" id="s2p2" style="left:750px; top:420px"></div>
+    <div class="pw" id="s2p3" style="left:1230px; top:420px"></div>
+  </section>
+
+  <!-- 3. Editor -->
+  <section class="scene" id="s3">
+    <div class="caption" id="s3cap" style="top:70px">Semua bisa diedit.<small>Teks, gambar, layer — seperti di Canva.</small></div>
+    <div class="editor" id="s3ed">
+      <div class="ed-left">
+        <div class="ed-h">LAYER</div>
+        <div class="layer" id="ly1"><i>T</i>Judul</div>
+        <div class="layer"><i>T</i>Label</div>
+        <div class="layer" id="ly3"><i>▭</i>Diskon 30%</div>
+        <div class="layer"><i>◐</i>Gambar AI: gelas kopi</div>
+        <div class="layer"><i>T</i>Tanggal & alamat</div>
+        <div class="layer"><i>●</i>Lingkaran</div>
+        <div class="layer"><i>▦</i>Latar</div>
+      </div>
+      <div class="pw" id="s3p" style="left:495px; top:30px"></div>
+      <div class="aibar" id="s3ai"><span style="color:#5b5bf6">✦</span><span id="s3aitx">Minta AI memperbaiki halaman ini…</span></div>
+      <div class="ed-right">
+        <div class="ed-h">TEKS</div>
+        <div class="field"><span>Inter Display</span><span>Black</span></div>
+        <div class="field"><span>Ukuran</span><span>76</span></div>
+        <div class="prop">Warna</div>
+        <div class="sw" id="s3sw">
+          <span style="background:#fbe9d0" class="on"></span><span style="background:#ffffff"></span><span style="background:#f59e42" id="swOrange"></span>
+          <span style="background:#ef4444"></span><span style="background:#22c55e"></span><span style="background:#111"></span>
+        </div>
+        <div class="prop">Bayangan, outline, sorotan</div>
+        <div class="field"><span>Transparansi</span><span>100%</span></div>
+      </div>
+    </div>
+    <div class="sel" id="s3sel"><i style="left:-10px;top:-10px"></i><i style="right:-10px;top:-10px"></i><i style="left:-10px;bottom:-10px"></i><i style="right:-10px;bottom:-10px"></i></div>
+    <div class="ring" id="s3ring"></div>
+    <svg class="cursor" id="cur" viewBox="0 0 24 24"><path d="M4 2l15 10.5-6.6 1.3L9 20.5z" fill="#111" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+  </section>
+
+  <!-- 4. Export -->
+  <section class="scene" id="s4">
+    <div class="caption" id="s4cap" style="top:90px">Export ke mana saja.<small>PPTX dengan teks yang tetap bisa diedit.</small></div>
+    <div class="pw" id="s4p" style="left:780px; top:400px"></div>
+    <div class="file" id="f1"><span class="ext" style="background:#d24726">PPTX</span><small>Teks tetap teks</small></div>
+    <div class="file" id="f2"><span class="ext" style="background:#e5252a">PDF</span><small>Multi halaman</small></div>
+    <div class="file" id="f3"><span class="ext" style="background:#0a84ff">PNG</span><small>Bisa transparan</small></div>
+    <div class="file" id="f4"><span class="ext" style="background:#30a46c">SVG</span><small>Vektor</small></div>
+  </section>
+
+  <!-- 5. Template (screenshot asli) -->
+  <section class="scene" id="s5">
+    <div class="caption" id="s5cap" style="top:380px; left:120px; right:auto; width:620px; text-align:left">Atau mulai<br>dari template.<small>Kartu nama, poster, story,<br>pitch deck, sertifikat.</small></div>
+    <div class="shot" id="s5shot" style="left:760px; top:200px; width:1040px"><img src="templates.jpg" alt=""></div>
+  </section>
+
+  <!-- 6. Fitur -->
+  <section class="scene" id="s6">
+    <div class="title" id="s6title" style="top:140px; font-size:96px">Makin dipakai, makin pas.</div>
+    <div class="features">
+      <div class="feat"><div class="e">🪄</div><h3>Perbaiki desain</h3><p>"Lebih minimalis", "warna lebih cerah" — AI menyusun ulang.</p></div>
+      <div class="feat"><div class="e">🖼️</div><h3>Gambar AI</h3><p>Buat & edit gambar dengan instruksi.</p></div>
+      <div class="feat"><div class="e">✍️</div><h3>Copywriting</h3><p>5 alternatif headline, caption, dan CTA.</p></div>
+      <div class="feat"><div class="e">🎨</div><h3>Brand Kit</h3><p>Warna, font, logo, dan tone dipakai otomatis.</p></div>
+      <div class="feat"><div class="e">👍</div><h3>Belajar dari seleramu</h3><p>Rating & masukan jadi contoh untuk desain berikutnya.</p></div>
+      <div class="feat"><div class="e">📐</div><h3>Magic Resize</h3><p>Satu desain ke ukuran lain, isi ikut menyesuaikan.</p></div>
+    </div>
+  </section>
+
+  <!-- 7. Penutup -->
+  <section class="scene" id="s7">
+    <div class="logo" id="s7logo" style="left:880px; top:240px; width:160px; height:160px; border-radius:38px; font-size:96px">R</div>
+    <div class="title" id="s7title" style="top:440px; font-size:150px">Racik</div>
+    <div class="sub" id="s7sub" style="top:630px; font-size:44px">Desain cepat dengan AI.</div>
+    <div class="badge" id="s7badge" style="top:750px">racik.katili.dev</div>
+  </section>
+
+  <div class="fade" id="fade"></div>
+</div>
+
+<script>
+  // ---- Poster hasil AI: satu tata letak, tiga palet ----
+  function poster(cls) {
+    return `<div class="poster ${cls}">
+      <div class="circ" style="width:420px;height:420px;right:-140px;top:-160px"></div>
+      <div class="circ" style="width:220px;height:220px;left:-80px;bottom:-90px"></div>
+      <div class="ptag">PEMBUKAAN CABANG BARU</div>
+      <div class="ph1">Kopi Susu<br>Gula Aren</div>
+      <div class="pdisc">DISKON <b>30%</b></div>
+      <div class="cup"><div class="straw"></div><div class="glass"></div><div class="lid"></div></div>
+      <div class="pfoot">12–14 Des · Jl. Merdeka 21</div></div>`;
+  }
+  ['s2p1', 's3p', 's4p'].forEach((id) => { document.getElementById(id).innerHTML = poster('pA'); });
+  document.getElementById('s2p2').innerHTML = poster('pB');
+  document.getElementById('s2p3').innerHTML = poster('pC');
+
+  // ---- Pembantu animasi ----
+  const DURATION = 31;
+  const TOTAL = DURATION + 1.5; // tahan logo sejenak sebelum layar gelap
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const prog = (t, a, b) => clamp((t - a) / (b - a));
+  const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+  const easeInOut = (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  const back = (x) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+  const lerp = (a, b, x) => a + (b - a) * x;
+  const $ = (id) => document.getElementById(id);
+  function sceneAlpha(t, a, b, fi = .5, fo = .5) {
+    return Math.min(easeOut(prog(t, a, a + fi)), 1 - easeInOut(prog(t, b - fo, b)));
+  }
+  function show(el, alpha) { el.style.opacity = alpha; el.style.visibility = alpha <= 0.001 ? 'hidden' : 'visible'; }
+  function rise(el, t, start, dur = .7, dist = 40) {
+    const x = easeOut(prog(t, start, start + dur));
+    el.style.opacity = x;
+    el.style.transform = `translateY(${(1 - x) * dist}px)`;
+  }
+  // titik tengah elemen di layar (setelah transform)
+  function center(el) { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
+  // kursor berpindah melalui titik-titik [waktu, x, y]
+  function cursorPath(el, t, pts) {
+    let x = pts[0][1], y = pts[0][2];
+    for (let i = 1; i < pts.length; i++) {
+      const k = easeInOut(prog(t, pts[i - 1][0], pts[i][0]));
+      if (t >= pts[i - 1][0]) { x = lerp(pts[i - 1][1], pts[i][1], k); y = lerp(pts[i - 1][2], pts[i][2], k); }
+    }
+    el.style.left = (x - 8) + 'px'; el.style.top = (y - 4) + 'px';
+  }
+  function click(ring, t, at, x, y) {
+    const p = prog(t, at, at + .45);
+    ring.style.left = x + 'px'; ring.style.top = y + 'px';
+    ring.style.opacity = p > 0 && p < 1 ? 1 - p : 0;
+    ring.style.transform = `scale(${.4 + p})`;
+  }
+
+  const PROMPT = 'Poster promo kopi susu gula aren, diskon 30% untuk pembukaan cabang baru';
+  const FIX = 'Lebih minimalis, warna lebih hangat';
+
+  // ---- Linimasa (detik) ----
+  // s1 0–3.5 · s2 3.5–11 · s3 11–18 · s4 18–21.5 · s5 21.5–25 · s6 25–28.6 · s7 28.6–akhir
+  window.seek = function (t) {
+    $('b1').style.transform = `translate(${150 + Math.sin(t * .25) * 200}px, ${150 + Math.cos(t * .2) * 150}px)`;
+    $('b2').style.transform = `translate(${1300 + Math.cos(t * .22) * 220}px, ${400 + Math.sin(t * .3) * 160}px)`;
+    $('b3').style.transform = `translate(${700 + Math.sin(t * .18 + 2) * 300}px, ${950 + Math.cos(t * .25) * 120}px)`;
+
+    // 1. Pembuka
+    {
+      show($('s1'), sceneAlpha(t, 0, 3.5, .01, .6));
+      const ic = back(prog(t, .2, 1.0));
+      $('s1logo').style.transform = `scale(${ic}) rotate(${(1 - ic) * -10}deg)`;
+      $('s1logo').style.opacity = clamp(ic * 2);
+      rise($('s1title'), t, 1.0, .8, 50);
+      rise($('s1sub'), t, 1.6, .8, 30);
+    }
+
+    // 2. Prompt → desain
+    {
+      show($('s2'), sceneAlpha(t, 3.5, 11, .5, .6));
+      rise($('s2cap'), t, 3.6, .7, 30);
+      const n = Math.round(PROMPT.length * prog(t, 4.3, 6.4));
+      $('s2ta').innerHTML = n ? PROMPT.slice(0, n) + (t < 6.9 ? '<span class="caret"></span>' : '') : 'Deskripsikan desain yang kamu mau…';
+      $('s2ta').classList.toggle('ph', !n);
+      // tombol Generate ditekan, kotak prompt naik & memudar
+      const pr = prog(t, 6.9, 7.1) - prog(t, 7.1, 7.3);
+      $('s2gen').style.transform = `scale(${1 - pr * .06})`;
+      const up = easeInOut(prog(t, 7.3, 7.9));
+      $('s2prompt').style.opacity = Math.min(easeOut(prog(t, 3.8, 4.4)), 1 - up);
+      $('s2prompt').style.transform = `translateY(${(1 - easeOut(prog(t, 3.8, 4.4))) * 40 - up * 60}px)`;
+      // muat (shimmer), lalu tiga desain muncul
+      const sp = Math.min(easeOut(prog(t, 7.7, 8.0)), 1 - prog(t, 8.9, 9.2));
+      $('s2spark').style.opacity = sp;
+      ['sh1', 'sh2', 'sh3'].forEach((id, i) => {
+        $(id).style.opacity = Math.min(easeOut(prog(t, 7.7 + i * .08, 8.1 + i * .08)), 1 - prog(t, 8.9 + i * .12, 9.2 + i * .12));
+        $(id).style.backgroundPosition = `${100 - ((t * 120) % 300)}% 0`;
+      });
+      ['s2p1', 's2p2', 's2p3'].forEach((id, i) => {
+        const k = easeOut(prog(t, 8.9 + i * .12, 9.5 + i * .12));
+        $(id).style.opacity = k;
+        $(id).style.transform = `translateY(${(1 - k) * 30}px) scale(${.7 * lerp(.92, 1, back(k))})`;
+      });
+    }
+
+    // 3. Editor
+    {
+      show($('s3'), sceneAlpha(t, 11, 18, .5, .6));
+      rise($('s3cap'), t, 11.1, .7, 30);
+      const e = easeOut(prog(t, 11.2, 11.9));
+      $('s3ed').style.opacity = e;
+      $('s3ed').style.transform = `translateY(${(1 - e) * 50}px)`;
+      const p = $('s3p');
+      p.style.transform = 'scale(1.05)';
+      const h1 = p.querySelector('.ph1'), disc = p.querySelector('.pdisc');
+      // warna judul berubah setelah swatch oranye diklik
+      const orange = t > 14.35;
+      h1.style.color = orange ? '#f59e42' : '';
+      $('s3sw').children[0].classList.toggle('on', !orange);
+      $('swOrange').classList.toggle('on', orange);
+      // badge diskon digeser sedikit
+      const dg = easeInOut(prog(t, 15.3, 16.0));
+      disc.style.transform = `translate(${dg * 40}px, ${dg * 26}px) rotate(${dg * -4}deg)`;
+      // kotak seleksi: judul dulu, lalu badge diskon
+      const target = t < 15.0 ? h1 : disc;
+      const r = target.getBoundingClientRect();
+      $('s3sel').style.left = (r.left - 8) + 'px'; $('s3sel').style.top = (r.top - 8) + 'px';
+      $('s3sel').style.width = (r.width + 16) + 'px'; $('s3sel').style.height = (r.height + 16) + 'px';
+      $('s3sel').style.opacity = (t > 13.05 && t < 16.6) ? 1 : 0;
+      $('ly1').classList.toggle('on', t > 13.05 && t < 15.0);
+      $('ly3').classList.toggle('on', t >= 15.0 && t < 16.6);
+      // kursor: ke judul → swatch → badge (seret) → kotak AI
+      const [hx, hy] = center(h1);
+      const [sx, sy] = center($('swOrange'));
+      const dr = disc.getBoundingClientRect();
+      const [ax, ay] = center($('s3ai'));
+      cursorPath($('cur'), t, [[12.2, 1500, 1000], [13.0, hx, hy], [13.6, hx, hy], [14.3, sx, sy], [14.7, sx, sy],
+        [15.2, dr.left + 60 - dg * 40, dr.top + 30 - dg * 26], [15.3, dr.left + 60 - dg * 40, dr.top + 30 - dg * 26],
+        [16.0, dr.left + 60, dr.top + 30], [16.4, dr.left + 60, dr.top + 30], [16.9, ax - 200, ay]]);
+      $('cur').style.opacity = Math.min(prog(t, 12.2, 12.5), 1 - prog(t, 17.4, 17.7));
+      click($('s3ring'), t, t < 14.0 ? 13.0 : 14.3, t < 14.0 ? hx : sx, t < 14.0 ? hy : sy);
+      // minta AI memperbaiki
+      const n = Math.round(FIX.length * prog(t, 16.9, 17.7));
+      $('s3aitx').innerHTML = n ? `<b>${FIX.slice(0, n)}</b>` : 'Minta AI memperbaiki halaman ini…';
+    }
+
+    // 4. Export
+    {
+      show($('s4'), sceneAlpha(t, 18, 21.5, .5, .6));
+      rise($('s4cap'), t, 18.1, .7, 30);
+      const k = easeOut(prog(t, 18.2, 18.8));
+      $('s4p').style.opacity = k;
+      $('s4p').style.transform = `scale(${.6 * lerp(.9, 1, k)})`;
+      // berkas keluar dari poster ke kiri & kanan
+      const dest = [[300, 400], [560, 560], [1160, 560], [1420, 400]];
+      ['f1', 'f2', 'f3', 'f4'].forEach((id, i) => {
+        const f = easeOut(prog(t, 18.8 + i * .15, 19.6 + i * .15));
+        const x = lerp(860, dest[i][0], f), y = lerp(490, dest[i][1], f) - Math.sin(f * Math.PI) * 80;
+        $(id).style.left = x + 'px'; $(id).style.top = y + 'px';
+        $(id).style.opacity = clamp(f * 3);
+        $(id).style.transform = `scale(${lerp(.5, 1, f)}) rotate(${(i - 1.5) * 3 * f}deg)`;
+      });
+    }
+
+    // 5. Template
+    {
+      show($('s5'), sceneAlpha(t, 21.5, 25, .6, .6));
+      const x = easeOut(prog(t, 21.6, 22.6));
+      $('s5cap').style.opacity = x;
+      $('s5cap').style.transform = `translateX(${(1 - x) * -60}px)`;
+      const k = prog(t, 21.5, 25);
+      const s = easeOut(prog(t, 21.7, 22.7));
+      $('s5shot').style.opacity = s;
+      $('s5shot').style.transform = `perspective(2200px) rotateY(-10deg) translateY(${(1 - s) * 100 - k * 40}px) scale(${1 + k * .04})`;
+    }
+
+    // 6. Fitur
+    {
+      show($('s6'), sceneAlpha(t, 25, 28.8, .5, .6));
+      rise($('s6title'), t, 25.1, .7, 30);
+      document.querySelectorAll('.feat').forEach((el, i) => rise(el, t, 25.5 + i * .15, .6, 30));
+    }
+
+    // 7. Penutup
+    {
+      show($('s7'), sceneAlpha(t, 28.6, TOTAL + 10, .6, .1));
+      $('s7logo').style.transform = `scale(${back(prog(t, 28.7, 29.4))})`;
+      rise($('s7title'), t, 29.0, .7, 40);
+      rise($('s7sub'), t, 29.4, .7, 24);
+      rise($('s7badge'), t, 29.7, .7, 16);
+    }
+
+    // Layar meredup di akhir
+    $('fade').style.opacity = easeInOut(prog(t, TOTAL - .6, TOTAL));
+  };
+  window.DURATION = TOTAL;
+
+  // Pratinjau di browser (tanpa ?render)
+  if (!location.search.includes('render')) {
+    const t0 = performance.now();
+    const loop = () => { window.seek(((performance.now() - t0) / 1000) % window.DURATION); requestAnimationFrame(loop); };
+    loop();
+  } else {
+    window.seek(0);
+  }
+</script>
+</body>
+</html>
